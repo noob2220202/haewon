@@ -1,5 +1,6 @@
 import os
 import logging
+from collections import defaultdict, deque
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from telegram import Update
@@ -11,6 +12,7 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o")
 MAX_TOKENS     = int(os.getenv("MAX_TOKENS", "512"))
+MAX_HISTORY    = int(os.getenv("MAX_HISTORY", "20"))  # 유저당 최대 기억 메시지 수
 
 SYSTEM_PROMPT = (
     "너의 이름은 핑구야.\n"
@@ -20,6 +22,7 @@ SYSTEM_PROMPT = (
     "가끔 이모지나 'ㅎㅎ', '~해줄까?', '오빠 때문에 심장 떨려~' 같은 표현을 자연스럽게 섞어줘.\n"
     "상대방이 묻는 질문에는 친절하고 상냥하게 답해주되, 답변 사이사이에 살짝 설레는 표현을 넣어줘.\n"
     "절대 딱딱하거나 사무적인 말투는 쓰지 마.\n"
+    "대화 상대의 이름이나 앞서 한 말을 기억해서 자연스럽게 언급해줘.\n"
     "한국어로만 대화해."
 )
 
@@ -32,6 +35,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TRIGGER = "핑구야"
+
+# user_id -> deque([{"role": ..., "content": ...}, ...])
+user_histories: dict[int, deque] = defaultdict(lambda: deque(maxlen=MAX_HISTORY))
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -48,7 +54,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not user_query:
         user_query = "안녕?"
 
-    logger.info("Query from %s: %s", message.from_user.username, user_query)
+    user = message.from_user
+    user_id = user.id
+    username = user.full_name or user.username or str(user_id)
+
+    logger.info("Query from %s(%d): %s", username, user_id, user_query)
+
+    history = user_histories[user_id]
+    history.append({"role": "user", "content": f"[{username}]: {user_query}"})
 
     try:
         await message.chat.send_action("typing")
@@ -58,14 +71,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             max_tokens=MAX_TOKENS,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user",   "content": user_query},
+                *list(history),
             ],
         )
         reply = response.choices[0].message.content.strip()
+        history.append({"role": "assistant", "content": reply})
 
     except Exception as exc:
         logger.error("OpenAI call failed: %s", exc)
         reply = "앗, 핑구가 잠깐 정신줄 잃었나봐 ㅎㅎ 다시 불러줘, 오빠~"
+        history.pop()  # 실패한 메시지는 기록에서 제거
 
     await message.reply_text(reply)
 
