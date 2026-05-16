@@ -1,10 +1,11 @@
 import os
+import json
 import logging
 from collections import defaultdict, deque
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from telegram import Update
-from telegram.ext import Application, MessageHandler, filters, ContextTypes
+from telegram.ext import Application, MessageHandler, CommandHandler, filters, ContextTypes
 
 load_dotenv()
 
@@ -12,7 +13,10 @@ TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o")
 MAX_TOKENS     = int(os.getenv("MAX_TOKENS", "512"))
-MAX_HISTORY    = int(os.getenv("MAX_HISTORY", "20"))  # 유저당 최대 기억 메시지 수
+MAX_HISTORY    = int(os.getenv("MAX_HISTORY", "20"))
+
+ADMIN_ID       = 7648288400
+APPROVED_FILE  = "approved_users.json"
 
 SYSTEM_PROMPT = (
     "너의 이름은 핑구야.\n"
@@ -38,8 +42,74 @@ logger = logging.getLogger(__name__)
 
 TRIGGER = "핑구야"
 
-# user_id -> deque([{"role": ..., "content": ...}, ...])
 user_histories: dict[int, deque] = defaultdict(lambda: deque(maxlen=MAX_HISTORY))
+
+
+def load_approved() -> set[int]:
+    if os.path.exists(APPROVED_FILE):
+        with open(APPROVED_FILE) as f:
+            return set(json.load(f))
+    return set()
+
+
+def save_approved(approved: set[int]) -> None:
+    with open(APPROVED_FILE, "w") as f:
+        json.dump(list(approved), f)
+
+
+approved_users: set[int] = load_approved()
+
+
+async def cmd_approve(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.id != ADMIN_ID:
+        return
+
+    if not context.args:
+        await update.message.reply_text("사용법: /approve 유저ID")
+        return
+
+    try:
+        target_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("유저ID는 숫자여야 해요.")
+        return
+
+    approved_users.add(target_id)
+    save_approved(approved_users)
+    logger.info("Approved user: %d", target_id)
+    await update.message.reply_text(f"✅ {target_id} 승인 완료!")
+
+
+async def cmd_unapprove(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.id != ADMIN_ID:
+        return
+
+    if not context.args:
+        await update.message.reply_text("사용법: /unapprove 유저ID")
+        return
+
+    try:
+        target_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("유저ID는 숫자여야 해요.")
+        return
+
+    approved_users.discard(target_id)
+    save_approved(approved_users)
+    logger.info("Unapproved user: %d", target_id)
+    await update.message.reply_text(f"❌ {target_id} 승인 취소!")
+
+
+async def cmd_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.id != ADMIN_ID:
+        return
+
+    if not approved_users:
+        await update.message.reply_text("승인된 유저가 없어요.")
+        return
+
+    text = "승인된 유저 목록:\n" + "\n".join(str(uid) for uid in approved_users)
+    await update.message.reply_text(text)
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -52,14 +122,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not text.startswith(TRIGGER):
         return
 
+    user = message.from_user
+    user_id = user.id
+
+    # 어드민은 항상 허용
+    if user_id != ADMIN_ID and user_id not in approved_users:
+        await message.reply_text("승인된 사용자만 핑구를 부를 수 있어요. 관리자에게 문의하세요.")
+        return
+
     user_query = text[len(TRIGGER):].lstrip(" ,!~야")
     if not user_query:
         user_query = "안녕?"
 
-    user = message.from_user
-    user_id = user.id
     username = user.full_name or user.username or str(user_id)
-
     logger.info("Query from %s(%d): %s", username, user_id, user_query)
 
     history = user_histories[user_id]
@@ -82,16 +157,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception as exc:
         logger.error("OpenAI call failed: %s", exc)
         reply = "앗, 핑구가 잠깐 정신줄 잃었나봐 ㅎㅎ 다시 불러줘, 오빠~"
-        history.pop()  # 실패한 메시지는 기록에서 제거
+        history.pop()
 
     await message.reply_text(reply)
 
 
 def main() -> None:
     app = Application.builder().token(TELEGRAM_TOKEN).build()
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
-    )
+    app.add_handler(CommandHandler("approve", cmd_approve))
+    app.add_handler(CommandHandler("unapprove", cmd_unapprove))
+    app.add_handler(CommandHandler("approved", cmd_list))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     logger.info("핑구 bot is running...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
