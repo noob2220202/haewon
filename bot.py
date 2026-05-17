@@ -143,6 +143,8 @@ approved_users: set[int] = load_approved()
 
 async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global current_version
+    if update.message.from_user.id != ADMIN_ID:
+        return
     cmd = update.message.text.strip().lstrip("/").split("@")[0]
     v = int(cmd[1])
     current_version = v
