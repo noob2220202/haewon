@@ -150,15 +150,13 @@ async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     current_version = v
     label, _ = PROMPTS[v]
     user_histories.clear()
-    SEP = "━━━━━━━━━━━━━━━"
     text = (
-        f"{SEP}\n"
-        f"🎣 <b><i>도파민으로 가득 채윰</i></b>\n"
-        f"{SEP}\n"
-        f"🔄 모드 변경: <b>{label}</b>\n"
-        f"🗑 <i>대화 기록 전체 초기화됨</i>\n"
-        f"{SEP}\n"
-        f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>"
+        f"🎣 <b>도파민 가득 채윰</b>\n"
+        f"\n"
+        f"모드: <b>{label}</b>\n"
+        f"<i>대화 기록 전체 초기화됨 🗑</i>\n"
+        f"\n"
+        f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
@@ -263,18 +261,16 @@ async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     winner_rank, winner_name, winner_count = random.choice(pool)
 
-    SEP = "━━━━━━━━━━━━━━━"
     text = (
-        f"{SEP}\n"
-        f"🎰 <b><i>도파민으로 가득 채윰</i></b>\n"
-        f"{SEP}\n"
+        f"🎣 <b>도파민 가득 채윰</b>\n"
+        f"\n"
         f"🎲 추첨 범위: <b>상위 {n}명</b>\n"
-        f"👥 참여 인원: <b><u>{len(pool)}명</u></b>\n"
-        f"{SEP}\n"
-        f"🎉 당첨자: <b><u>{html.escape(winner_name)}</u></b> 🎊\n"
-        f"🏅 순위: <b>{winner_rank}위</b>  💬 <i>채팅 {winner_count:,}회</i>\n"
-        f"{SEP}\n"
-        f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>"
+        f"👥 참여 인원: <b>{len(pool)}명</b>\n"
+        f"\n"
+        f"🎉 당첨자: <b>{html.escape(winner_name)}</b>\n"
+        f"순위: <b>{winner_rank}위</b>  ·  채팅 <b>{winner_count:,}회</b>\n"
+        f"\n"
+        f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
@@ -285,7 +281,6 @@ PAGE_SIZE = 10
 
 
 def build_ranking_page(page: int) -> tuple[str, InlineKeyboardMarkup | None]:
-    SEP = "━━━━━━━━━━━━━━━"
     ranking = get_ranking()
     total = len(ranking)
 
@@ -298,9 +293,8 @@ def build_ranking_page(page: int) -> tuple[str, InlineKeyboardMarkup | None]:
     page_items = ranking[start: start + PAGE_SIZE]
 
     lines = [
-        f"{SEP}",
-        f"🏆 <b><i>도파민으로 가득 채윰</i></b>",
-        f"{SEP}",
+        f"🎣 <b>도파민 가득 채윰</b>",
+        f"",
     ]
     for rank, name, count in page_items:
         if rank <= 3:
@@ -309,13 +303,13 @@ def build_ranking_page(page: int) -> tuple[str, InlineKeyboardMarkup | None]:
             medal = NUMBER_EMOJI[rank - 4]
         else:
             medal = f"<b>{rank}.</b>"
-        lines.append(f"{medal} <b>{html.escape(name)}</b> — <i>{count:,}회</i>")
+        lines.append(f"{medal} <b>{html.escape(name)}</b>  <i>{count:,}회</i>")
 
     lines += [
-        f"{SEP}",
-        f"📄 <i>{page} / {total_pages} 페이지  |  총 {total}명</i>",
-        f"{SEP}",
-        f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>",
+        f"",
+        f"<i>📄 {page} / {total_pages} 페이지  |  총 {total}명</i>",
+        f"",
+        f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>",
     ]
     text = "\n".join(lines)
 
@@ -353,18 +347,15 @@ async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     display_name = html.escape(user.full_name or user.username or uid)
     tag = f"@{user.username}" if user.username else "없음"
 
-    SEP = "━━━━━━━━━━━━━━━"
-
     if uid not in chat_stats:
         text = (
-            f"{SEP}\n"
-            f"🎣 <b><i>도파민으로 가득 채윰</i></b>\n"
-            f"{SEP}\n"
-            f"🔖 태그: <u>{html.escape(tag)}</u>\n"
-            f"{SEP}\n"
-            f"💬 누적 채팅수: <b><u>0회</u></b>\n"
-            f"{SEP}\n"
-            f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>"
+            f"🎣 <b>도파민 가득 채윰,</b> <i>{display_name}</i>\n"
+            f"\n"
+            f"태그: <b>{html.escape(tag)}</b>\n"
+            f"순위: <b>-</b>\n"
+            f"누적 채팅수: <b>0회</b>\n"
+            f"\n"
+            f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
         )
         await update.message.reply_text(text, parse_mode=ParseMode.HTML)
         return
@@ -374,15 +365,13 @@ async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     my_rank = next((r for r, n, _ in ranking if n == chat_stats[uid]["name"]), "?")
 
     text = (
-        f"{SEP}\n"
-        f"🎣 <b><i>도파민으로 가득 채윰</i></b>\n"
-        f"{SEP}\n"
-        f"🔖 태그: <u>{html.escape(tag)}</u>\n"
-        f"🏅 순위: <b>{my_rank}위</b>\n"
-        f"{SEP}\n"
-        f"💬 누적 채팅수: <b><u>{count:,}회</u></b>\n"
-        f"{SEP}\n"
-        f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>"
+        f"🎣 <b>도파민 가득 채윰,</b> <i>{display_name}</i>\n"
+        f"\n"
+        f"태그: <b>{html.escape(tag)}</b>\n"
+        f"순위: <b>{my_rank}위</b>\n"
+        f"누적 채팅수: <b>{count:,}회</b>\n"
+        f"\n"
+        f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
