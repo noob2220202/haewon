@@ -7,9 +7,9 @@ import html
 from collections import defaultdict, deque
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.constants import ParseMode
-from telegram.ext import Application, MessageHandler, CommandHandler, filters, ContextTypes
+from telegram.ext import Application, MessageHandler, CommandHandler, CallbackQueryHandler, filters, ContextTypes
 
 load_dotenv()
 
@@ -189,23 +189,31 @@ async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 # ── 공개 명령어 ──────────────────────────────────────────────
 
-async def cmd_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    ranking = get_ranking()
-    SEP = "━━━━━━━━━━━━━━━"
+PAGE_SIZE = 10
 
-    if not ranking:
-        await update.message.reply_text("📭 아직 집계된 채팅이 없어요!")
-        return
+
+def build_ranking_page(page: int) -> tuple[str, InlineKeyboardMarkup | None]:
+    SEP = "━━━━━━━━━━━━━━━"
+    ranking = get_ranking()
+    total = len(ranking)
+
+    if total == 0:
+        return "📭 아직 집계된 채팅이 없어요!", None
+
+    total_pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+    page = max(1, min(page, total_pages))
+    start = (page - 1) * PAGE_SIZE
+    page_items = ranking[start: start + PAGE_SIZE]
 
     lines = [
         f"{SEP}",
         f"🏆 <b><i>도파민으로 가득 채윰</i></b>",
         f"{SEP}",
     ]
-    for rank, name, count in ranking[:20]:
+    for rank, name, count in page_items:
         if rank <= 3:
             medal = RANK_MEDALS[rank - 1]
-        elif rank <= 10:
+        elif rank - 4 < len(NUMBER_EMOJI):
             medal = NUMBER_EMOJI[rank - 4]
         else:
             medal = f"<b>{rank}.</b>"
@@ -213,9 +221,38 @@ async def cmd_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
     lines += [
         f"{SEP}",
+        f"📄 <i>{page} / {total_pages} 페이지  |  총 {total}명</i>",
+        f"{SEP}",
         f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>",
     ]
-    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+    text = "\n".join(lines)
+
+    buttons = []
+    if page > 1:
+        buttons.append(InlineKeyboardButton("◀️ 이전", callback_data=f"rank_{page - 1}"))
+    buttons.append(InlineKeyboardButton(f"· {page}/{total_pages} ·", callback_data="rank_noop"))
+    if page < total_pages:
+        buttons.append(InlineKeyboardButton("다음 ▶️", callback_data=f"rank_{page + 1}"))
+
+    markup = InlineKeyboardMarkup([buttons])
+    return text, markup
+
+
+async def cmd_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    text, markup = build_ranking_page(1)
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=markup)
+
+
+async def callback_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "rank_noop":
+        return
+
+    page = int(query.data.split("_")[1])
+    text, markup = build_ranking_page(page)
+    await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=markup)
 
 
 async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -322,7 +359,8 @@ def main() -> None:
     app.add_handler(CommandHandler("approve",   cmd_approve))
     app.add_handler(CommandHandler("unapprove", cmd_unapprove))
     app.add_handler(CommandHandler("approved",  cmd_list))
-    app.add_handler(CommandHandler("rank",   cmd_ranking))
+    app.add_handler(CommandHandler("rank",      cmd_ranking))
+    app.add_handler(CallbackQueryHandler(callback_ranking, pattern=r"^rank_"))
     app.add_handler(CommandHandler("my",     cmd_myinfo))
     app.add_handler(CommandHandler("draw",   cmd_draw))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
