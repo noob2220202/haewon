@@ -213,7 +213,7 @@ async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if uid not in chat_stats:
         text = (
             f"{SEP}\n"
-            f"🎣 <b><i>도파민으로 가득 {display_name}</i></b>\n"
+            f"🎣 <b><i>도파민으로 가득 채윰</i></b>\n"
             f"{SEP}\n"
             f"🔖 태그: <u>{html.escape(tag)}</u>\n"
             f"{SEP}\n"
@@ -230,7 +230,7 @@ async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
     text = (
         f"{SEP}\n"
-        f"🎣 <b><i>도파민으로 가득 {display_name}</i></b>\n"
+        f"🎣 <b><i>도파민으로 가득 채윰</i></b>\n"
         f"{SEP}\n"
         f"🔖 태그: <u>{html.escape(tag)}</u>\n"
         f"🏅 순위: <b>{my_rank}위</b>\n"
