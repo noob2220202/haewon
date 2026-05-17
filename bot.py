@@ -3,6 +3,7 @@ import json
 import time
 import random
 import logging
+import html
 from collections import defaultdict, deque
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
@@ -91,6 +92,18 @@ def get_ranking() -> list[tuple[int, str, int]]:
 
 
 chat_stats: dict = load_chat_stats()
+
+LEVEL_THRESHOLDS = [0, 30, 100, 200, 350, 500, 750, 1000, 1500, 2500]
+LEVEL_TITLES = [
+    "🌱 새싹", "🐣 병아리", "🐬 돌고래", "🦊 여우",
+    "🐯 호랑이", "🦁 사자", "🐉 드래곤", "👑 왕", "💎 다이아", "🌟 전설",
+]
+
+def get_level(count: int) -> tuple[int, str]:
+    for i in range(len(LEVEL_THRESHOLDS) - 1, -1, -1):
+        if count >= LEVEL_THRESHOLDS[i]:
+            return i + 1, LEVEL_TITLES[i]
+    return 1, LEVEL_TITLES[0]
 
 
 # ── 관리자 명령어 ────────────────────────────────────────────
@@ -192,25 +205,42 @@ async def cmd_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.message.from_user
     uid = str(user.id)
-    username = user.full_name or user.username or uid
+    display_name = html.escape(user.full_name or user.username or uid)
+    tag = f"@{user.username}" if user.username else "없음"
+
+    SEP = "━━━━━━━━━━━━━━━"
 
     if uid not in chat_stats:
-        await update.message.reply_text(
-            f"👤 <b>{username}</b>\n\n<i>아직 채팅 기록이 없어요. 대화를 시작해보세요! 💬</i>",
-            parse_mode=ParseMode.HTML,
+        text = (
+            f"{SEP}\n"
+            f"🎣 <b><i>도파민으로 가득 {display_name}</i></b>\n"
+            f"{SEP}\n"
+            f"🔖 태그: <u>{html.escape(tag)}</u>\n"
+            f"📈 레벨: <b>1</b>  <i>🌱 새싹</i>\n"
+            f"{SEP}\n"
+            f"💬 누적 채팅수: <b><u>0회</u></b>\n"
+            f"{SEP}\n"
+            f"❤️ <i>핑구와 함께 신나게 놀아요 !</i>"
         )
+        await update.message.reply_text(text, parse_mode=ParseMode.HTML)
         return
 
-    ranking = get_ranking()
-    my_rank = next((r for r, n, _ in ranking if n == chat_stats[uid]["name"]), None)
     count = chat_stats[uid]["count"]
+    level, title = get_level(count)
+    ranking = get_ranking()
+    my_rank = next((r for r, n, _ in ranking if n == chat_stats[uid]["name"]), "?")
 
     text = (
-        f"👤 <b>내 채팅 정보</b>\n\n"
-        f"이름: <b>{username}</b>\n"
-        f"순위: 🏅 <b>{my_rank}위</b>\n"
-        f"채팅 수: <i>{count:,}개</i>\n\n"
-        f"<blockquote>계속 채팅하면 순위가 올라가요! 💪</blockquote>"
+        f"{SEP}\n"
+        f"🎣 <b><i>도파민으로 가득 {display_name}</i></b>\n"
+        f"{SEP}\n"
+        f"🔖 태그: <u>{html.escape(tag)}</u>\n"
+        f"🏅 순위: <b>{my_rank}위</b>\n"
+        f"📈 레벨: <b>{level}</b>  <i>{title}</i>\n"
+        f"{SEP}\n"
+        f"💬 누적 채팅수: <b><u>{count:,}회</u></b>\n"
+        f"{SEP}\n"
+        f"❤️ <i>핑구와 함께 신나게 놀아요 !</i>"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
