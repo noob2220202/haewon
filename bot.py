@@ -216,17 +216,15 @@ async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             f"🎣 <b><i>도파민으로 가득 {display_name}</i></b>\n"
             f"{SEP}\n"
             f"🔖 태그: <u>{html.escape(tag)}</u>\n"
-            f"📈 레벨: <b>1</b>  <i>🌱 새싹</i>\n"
             f"{SEP}\n"
             f"💬 누적 채팅수: <b><u>0회</u></b>\n"
             f"{SEP}\n"
-            f"❤️ <i>핑구와 함께 신나게 놀아요 !</i>"
+            f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>"
         )
         await update.message.reply_text(text, parse_mode=ParseMode.HTML)
         return
 
     count = chat_stats[uid]["count"]
-    level, title = get_level(count)
     ranking = get_ranking()
     my_rank = next((r for r, n, _ in ranking if n == chat_stats[uid]["name"]), "?")
 
@@ -236,11 +234,10 @@ async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         f"{SEP}\n"
         f"🔖 태그: <u>{html.escape(tag)}</u>\n"
         f"🏅 순위: <b>{my_rank}위</b>\n"
-        f"📈 레벨: <b>{level}</b>  <i>{title}</i>\n"
         f"{SEP}\n"
         f"💬 누적 채팅수: <b><u>{count:,}회</u></b>\n"
         f"{SEP}\n"
-        f"❤️ <i>핑구와 함께 신나게 놀아요 !</i>"
+        f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
