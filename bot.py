@@ -154,12 +154,12 @@ async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.from_user.id != ADMIN_ID:
         return
     if not context.args:
-        await update.message.reply_text("사용법: /추첨 20  (상위 N명 중 1명 추첨)")
+        await update.message.reply_text("사용법: /draw 20  (상위 N명 중 1명 추첨)")
         return
     try:
         n = int(context.args[0])
     except ValueError:
-        await update.message.reply_text("숫자를 입력해주세요. 예: /추첨 20")
+        await update.message.reply_text("숫자를 입력해주세요. 예: /draw 20")
         return
 
     ranking = get_ranking()
@@ -171,11 +171,18 @@ async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     winner_rank, winner_name, winner_count = random.choice(pool)
 
+    SEP = "━━━━━━━━━━━━━━━"
     text = (
-        f"🎰 <b>추첨 결과</b>\n\n"
-        f"<blockquote>상위 {n}명 중 행운의 주인공은...!</blockquote>\n\n"
-        f"🎉 <b><i>{winner_name}</i></b> 님이 당첨되셨습니다! 🎊\n\n"
-        f"<i>({winner_rank}위 · 채팅 {winner_count:,}개 · {n}위 이내 참여자 중 랜덤 선정)</i>"
+        f"{SEP}\n"
+        f"🎰 <b><i>도파민으로 가득 채윰</i></b>\n"
+        f"{SEP}\n"
+        f"🎲 추첨 범위: <b>상위 {n}명</b>\n"
+        f"👥 참여 인원: <b><u>{len(pool)}명</u></b>\n"
+        f"{SEP}\n"
+        f"🎉 당첨자: <b><u>{html.escape(winner_name)}</u></b> 🎊\n"
+        f"🏅 순위: <b>{winner_rank}위</b>  💬 <i>채팅 {winner_count:,}회</i>\n"
+        f"{SEP}\n"
+        f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
@@ -184,21 +191,30 @@ async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def cmd_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     ranking = get_ranking()
+    SEP = "━━━━━━━━━━━━━━━"
+
     if not ranking:
         await update.message.reply_text("📭 아직 집계된 채팅이 없어요!")
         return
 
-    lines = [f"🏆 <b>채팅 랭킹</b>\n"]
+    lines = [
+        f"{SEP}",
+        f"🏆 <b><i>도파민으로 가득 채윰</i></b>",
+        f"{SEP}",
+    ]
     for rank, name, count in ranking[:20]:
         if rank <= 3:
             medal = RANK_MEDALS[rank - 1]
         elif rank <= 10:
             medal = NUMBER_EMOJI[rank - 4]
         else:
-            medal = f"{rank}."
-        lines.append(f"{medal} <b>{name}</b> — <i>{count:,}개</i>")
+            medal = f"<b>{rank}.</b>"
+        lines.append(f"{medal} <b>{html.escape(name)}</b> — <i>{count:,}회</i>")
 
-    lines.append(f"\n<blockquote>총 {len(ranking)}명 집계 중</blockquote>")
+    lines += [
+        f"{SEP}",
+        f"❤️ <i>채윰이와 함께 신나게 놀아요 !</i>",
+    ]
     await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
 
 
