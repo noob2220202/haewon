@@ -198,6 +198,31 @@ def get_level(count: int) -> tuple[int, str]:
 
 # ── 관리자 명령어 ────────────────────────────────────────────
 
+async def cmd_setchat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.id != ADMIN_ID:
+        return
+    if len(context.args) < 2:
+        await update.message.reply_text("사용법: /setchat 유저ID 숫자\n예: /setchat 123456789 500")
+        return
+    try:
+        target_id = str(int(context.args[0]))
+        amount = int(context.args[1])
+    except ValueError:
+        await update.message.reply_text("유저ID와 숫자 모두 정수여야 해요.")
+        return
+    if target_id not in chat_stats:
+        await update.message.reply_text(f"❌ 해당 유저의 채팅 기록이 없어요.\n(채팅을 한 번도 안 한 유저)")
+        return
+    old = chat_stats[target_id]["count"]
+    chat_stats[target_id]["count"] = amount
+    save_chat_stats()
+    name = chat_stats[target_id]["name"]
+    await update.message.reply_text(
+        f"✅ <b>{html.escape(name)}</b> 채팅수 변경\n{old:,}회 → <b>{amount:,}회</b>",
+        parse_mode=ParseMode.HTML,
+    )
+
+
 async def cmd_approve(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.message.from_user.id != ADMIN_ID:
         return
@@ -438,6 +463,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 def main() -> None:
     app = Application.builder().token(TELEGRAM_TOKEN).build()
     app.add_handler(CommandHandler(["v1", "v2", "v3"], cmd_version))
+    app.add_handler(CommandHandler("setchat", cmd_setchat))
     app.add_handler(CommandHandler("approve",   cmd_approve))
     app.add_handler(CommandHandler("unapprove", cmd_unapprove))
     app.add_handler(CommandHandler("approved",  cmd_list))
