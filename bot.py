@@ -389,7 +389,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     username = user.full_name or user.username or str(user_id)
 
     # 채팅 카운트 (5글자 이상 + 1초 쿨다운)
-    if len(text) >= 5:
+    if len(text) >= 3:
         now = time.time()
         if now - last_chat_time.get(user_id, 0) >= 1.0:
             last_chat_time[user_id] = now
