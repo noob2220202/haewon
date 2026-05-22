@@ -4,6 +4,9 @@ import time
 import random
 import logging
 import html
+from datetime import datetime
+from datetime import time as dtime
+import zoneinfo
 from collections import defaultdict, deque
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
@@ -13,16 +16,25 @@ from telegram.ext import Application, MessageHandler, CommandHandler, CallbackQu
 
 load_dotenv()
 
-TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o")
-MAX_TOKENS     = int(os.getenv("MAX_TOKENS", "512"))
-MAX_HISTORY    = int(os.getenv("MAX_HISTORY", "20"))
+TELEGRAM_TOKEN   = os.environ["TELEGRAM_TOKEN"]
+OPENAI_API_KEY   = os.environ["OPENAI_API_KEY"]
+OPENAI_MODEL     = os.getenv("OPENAI_MODEL", "gpt-4o")
+MAX_TOKENS       = int(os.getenv("MAX_TOKENS", "512"))
+MAX_HISTORY      = int(os.getenv("MAX_HISTORY", "20"))
+ANNOUNCE_CHAT_ID = int(os.getenv("ANNOUNCE_CHAT_ID", "0"))
 
-ADMIN_ID          = 7648288400
-APPROVED_FILE     = "approved_users.json"
+ADMINS: set[int] = {7648288400}
+
 CHAT_STATS_FILE   = "chat_stats.json"
+DAY_STATS_FILE    = "day_stats.json"
 STICKER_TAGS_FILE = "sticker_tags.json"
+
+KST = zoneinfo.ZoneInfo("Asia/Seoul")
+
+
+def today_kst() -> str:
+    return datetime.now(KST).strftime("%Y-%m-%d")
+
 
 PROMPTS = {
     1: (
@@ -119,50 +131,17 @@ TRIGGER = "핑구야"
 user_histories: dict[int, deque] = defaultdict(lambda: deque(maxlen=MAX_HISTORY))
 last_chat_time: dict[int, float] = {}
 
-RANK_MEDALS = ["🥇", "🥈", "🥉"]
-NUMBER_EMOJI = ["4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"]
+RANK_MEDALS  = ["🥇", "🥈", "🥉"]
+NUMBER_EMOJI = ["4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
 
 
-# ── 승인 유저 ────────────────────────────────────────────────
+# ── 어드민 체크 ──────────────────────────────────────────────
 
-def load_approved() -> set[int]:
-    if os.path.exists(APPROVED_FILE):
-        with open(APPROVED_FILE) as f:
-            return set(json.load(f))
-    return set()
+def is_admin(user_id: int) -> bool:
+    return user_id in ADMINS
 
 
-def save_approved(approved: set[int]) -> None:
-    with open(APPROVED_FILE, "w") as f:
-        json.dump(list(approved), f)
-
-
-approved_users: set[int] = load_approved()
-
-
-# ── 버전 전환 ────────────────────────────────────────────────
-
-async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    global current_version
-    if update.message.from_user.id != ADMIN_ID:
-        return
-    cmd = update.message.text.strip().lstrip("/").split("@")[0]
-    v = int(cmd[1])
-    current_version = v
-    label, _ = PROMPTS[v]
-    user_histories.clear()
-    text = (
-        f"🎣 <b>도파민 가득 채윰</b>\n"
-        f"\n"
-        f"모드: <b>{label}</b>\n"
-        f"<i>대화 기록 전체 초기화됨 🗑</i>\n"
-        f"\n"
-        f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
-    )
-    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
-
-
-# ── 채팅 통계 ────────────────────────────────────────────────
+# ── 채팅 통계 (누적) ─────────────────────────────────────────
 
 def load_chat_stats() -> dict:
     if os.path.exists(CHAT_STATS_FILE):
@@ -176,13 +155,34 @@ def save_chat_stats() -> None:
         json.dump(chat_stats, f, ensure_ascii=False)
 
 
-def get_ranking() -> list[tuple[int, str, int]]:
-    """(순위, 이름, 카운트) 리스트 반환"""
-    sorted_users = sorted(chat_stats.items(), key=lambda x: x[1]["count"], reverse=True)
-    return [(i + 1, v["name"], v["count"]) for i, (_, v) in enumerate(sorted_users)]
-
-
 chat_stats: dict = load_chat_stats()
+
+
+# ── 채팅 통계 (일일) ─────────────────────────────────────────
+
+def load_day_stats() -> dict:
+    today = today_kst()
+    if os.path.exists(DAY_STATS_FILE):
+        with open(DAY_STATS_FILE) as f:
+            data = json.load(f)
+        if data.get("date") == today:
+            return data
+    return {"date": today, "stats": {}}
+
+
+def save_day_stats() -> None:
+    with open(DAY_STATS_FILE, "w") as f:
+        json.dump(day_stats, f, ensure_ascii=False)
+
+
+def ensure_day_reset() -> None:
+    global day_stats
+    if day_stats.get("date") != today_kst():
+        day_stats = {"date": today_kst(), "stats": {}}
+        save_day_stats()
+
+
+day_stats: dict = load_day_stats()
 
 
 # ── 스티커 태그 ──────────────────────────────────────────────
@@ -201,23 +201,108 @@ def save_sticker_tags() -> None:
 
 sticker_tags: dict = load_sticker_tags()
 
-LEVEL_THRESHOLDS = [0, 30, 100, 200, 350, 500, 750, 1000, 1500, 2500]
-LEVEL_TITLES = [
-    "🌱 새싹", "🐣 병아리", "🐬 돌고래", "🦊 여우",
-    "🐯 호랑이", "🦁 사자", "🐉 드래곤", "👑 왕", "💎 다이아", "🌟 전설",
-]
 
-def get_level(count: int) -> tuple[int, str]:
-    for i in range(len(LEVEL_THRESHOLDS) - 1, -1, -1):
-        if count >= LEVEL_THRESHOLDS[i]:
-            return i + 1, LEVEL_TITLES[i]
-    return 1, LEVEL_TITLES[0]
+# ── 랭킹 헬퍼 ────────────────────────────────────────────────
+
+def get_ranking(stats_dict: dict) -> list[tuple[int, str, int]]:
+    sorted_users = sorted(stats_dict.items(), key=lambda x: x[1]["count"], reverse=True)
+    return [(i + 1, v["name"], v["count"]) for i, (_, v) in enumerate(sorted_users)]
+
+
+# ── 자정 일일 결과 발송 ───────────────────────────────────────
+
+async def job_midnight_ranking(context) -> None:
+    global day_stats
+
+    if not ANNOUNCE_CHAT_ID:
+        day_stats = {"date": today_kst(), "stats": {}}
+        save_day_stats()
+        return
+
+    stats      = day_stats.get("stats", {})
+    date_label = day_stats.get("date", today_kst())
+
+    try:
+        dt = datetime.strptime(date_label, "%Y-%m-%d")
+        date_str = dt.strftime("%m월 %d일")
+    except Exception:
+        date_str = date_label
+
+    ranking = get_ranking(stats)
+
+    if not ranking:
+        text = (
+            f"🎣 <b>도파민 가득 채윰</b>\n"
+            f"\n"
+            f"📅 <b>{date_str} 일일 결과</b>\n"
+            f"\n"
+            f"오늘은 채팅 기록이 없어요 😢\n"
+            f"\n"
+            f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
+        )
+    else:
+        lines = [
+            f"🎣 <b>도파민 가득 채윰</b>",
+            f"",
+            f"📅 <b>{date_str} 일일 결과</b>",
+            f"",
+        ]
+        for rank, name, count in ranking[:20]:
+            if rank <= 3:
+                medal = RANK_MEDALS[rank - 1]
+            elif rank - 4 < len(NUMBER_EMOJI):
+                medal = NUMBER_EMOJI[rank - 4]
+            else:
+                medal = f"{rank}."
+            lines.append(f"{medal} <b>{html.escape(name)}</b>  <i>{count:,}회</i>")
+        lines += [
+            f"",
+            f"<i>총 {len(ranking)}명 참여</i>",
+            f"",
+            f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>",
+        ]
+        text = "\n".join(lines)
+
+    try:
+        await context.bot.send_message(
+            chat_id=ANNOUNCE_CHAT_ID,
+            text=text,
+            parse_mode=ParseMode.HTML,
+        )
+    except Exception as e:
+        logger.error("자정 랭킹 발송 실패: %s", e)
+
+    day_stats = {"date": today_kst(), "stats": {}}
+    save_day_stats()
+    logger.info("일일 통계 초기화 완료 → %s", today_kst())
+
+
+# ── 버전 전환 ────────────────────────────────────────────────
+
+async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    global current_version
+    if not is_admin(update.message.from_user.id):
+        return
+    cmd = update.message.text.strip().lstrip("/").split("@")[0]
+    v = int(cmd[1])
+    current_version = v
+    label, _ = PROMPTS[v]
+    user_histories.clear()
+    text = (
+        f"🎣 <b>도파민 가득 채윰</b>\n"
+        f"\n"
+        f"모드: <b>{label}</b>\n"
+        f"<i>대화 기록 전체 초기화됨 🗑</i>\n"
+        f"\n"
+        f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
+    )
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
 # ── 관리자 명령어 ────────────────────────────────────────────
 
 async def cmd_setchat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.id != ADMIN_ID:
+    if not is_admin(update.message.from_user.id):
         return
     if len(context.args) < 2:
         await update.message.reply_text("사용법: /setchat 유저ID 숫자\n예: /setchat 123456789 500")
@@ -229,65 +314,49 @@ async def cmd_setchat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await update.message.reply_text("유저ID와 숫자 모두 정수여야 해요.")
         return
     if target_id not in chat_stats:
-        await update.message.reply_text(f"❌ 해당 유저의 채팅 기록이 없어요.\n(채팅을 한 번도 안 한 유저)")
+        await update.message.reply_text("❌ 해당 유저의 채팅 기록이 없어요.")
         return
     old = chat_stats[target_id]["count"]
     chat_stats[target_id]["count"] = amount
     save_chat_stats()
     name = chat_stats[target_id]["name"]
     await update.message.reply_text(
-        f"✅ <b>{html.escape(name)}</b> 채팅수 변경\n{old:,}회 → <b>{amount:,}회</b>",
+        f"✅ <b>{html.escape(name)}</b> 누적 채팅수 변경\n{old:,}회 → <b>{amount:,}회</b>",
         parse_mode=ParseMode.HTML,
     )
 
 
-async def cmd_approve(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.id != ADMIN_ID:
+async def cmd_setdayrank(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not is_admin(update.message.from_user.id):
         return
-    if not context.args:
-        await update.message.reply_text("사용법: /approve 유저ID")
-        return
-    try:
-        target_id = int(context.args[0])
-    except ValueError:
-        await update.message.reply_text("유저ID는 숫자여야 해요.")
-        return
-    approved_users.add(target_id)
-    save_approved(approved_users)
-    await update.message.reply_text(f"✅ <b>{target_id}</b> 승인 완료!", parse_mode=ParseMode.HTML)
-
-
-async def cmd_unapprove(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.id != ADMIN_ID:
-        return
-    if not context.args:
-        await update.message.reply_text("사용법: /unapprove 유저ID")
+    if len(context.args) < 2:
+        await update.message.reply_text("사용법: /setdayrank 유저ID 숫자\n예: /setdayrank 123456789 50")
         return
     try:
-        target_id = int(context.args[0])
+        target_id = str(int(context.args[0]))
+        amount = int(context.args[1])
     except ValueError:
-        await update.message.reply_text("유저ID는 숫자여야 해요.")
+        await update.message.reply_text("유저ID와 숫자 모두 정수여야 해요.")
         return
-    approved_users.discard(target_id)
-    save_approved(approved_users)
-    await update.message.reply_text(f"❌ <b>{target_id}</b> 승인 취소!", parse_mode=ParseMode.HTML)
-
-
-async def cmd_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.id != ADMIN_ID:
+    ensure_day_reset()
+    if target_id not in day_stats["stats"]:
+        await update.message.reply_text("❌ 해당 유저의 오늘 채팅 기록이 없어요.")
         return
-    if not approved_users:
-        await update.message.reply_text("승인된 유저가 없어요.")
-        return
-    text = "✅ <b>승인된 유저 목록</b>\n\n" + "\n".join(f"• {uid}" for uid in approved_users)
-    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+    old = day_stats["stats"][target_id]["count"]
+    day_stats["stats"][target_id]["count"] = amount
+    save_day_stats()
+    name = day_stats["stats"][target_id]["name"]
+    await update.message.reply_text(
+        f"✅ <b>{html.escape(name)}</b> 오늘 채팅수 변경\n{old:,}회 → <b>{amount:,}회</b>",
+        parse_mode=ParseMode.HTML,
+    )
 
 
 async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.id != ADMIN_ID:
+    if not is_admin(update.message.from_user.id):
         return
     if not context.args:
-        await update.message.reply_text("사용법: /draw 20  (상위 N명 중 1명 추첨)")
+        await update.message.reply_text("사용법: /draw 20  (누적 상위 N명 중 1명 추첨)")
         return
     try:
         n = int(context.args[0])
@@ -295,18 +364,17 @@ async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("숫자를 입력해주세요. 예: /draw 20")
         return
 
-    ranking = get_ranking()
+    ranking = get_ranking(chat_stats)
     pool = ranking[:n]
-
     if not pool:
         await update.message.reply_text("🚫 참여자가 없어요!")
         return
 
     winner_rank, winner_name, winner_count = random.choice(pool)
-
     text = (
         f"🎣 <b>도파민 가득 채윰</b>\n"
         f"\n"
+        f"📊 누적 추첨\n"
         f"🎲 추첨 범위: <b>상위 {n}명</b>\n"
         f"👥 참여 인원: <b>{len(pool)}명</b>\n"
         f"\n"
@@ -318,8 +386,44 @@ async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
 
 
+async def cmd_drawday(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not is_admin(update.message.from_user.id):
+        return
+    if not context.args:
+        await update.message.reply_text("사용법: /drawday 20  (오늘 상위 N명 중 1명 추첨)")
+        return
+    try:
+        n = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("숫자를 입력해주세요. 예: /drawday 20")
+        return
+
+    ensure_day_reset()
+    ranking = get_ranking(day_stats["stats"])
+    pool = ranking[:n]
+    if not pool:
+        await update.message.reply_text("🚫 오늘 채팅한 참여자가 없어요!")
+        return
+
+    winner_rank, winner_name, winner_count = random.choice(pool)
+    date_str = datetime.now(KST).strftime("%m월 %d일")
+    text = (
+        f"🎣 <b>도파민 가득 채윰</b>\n"
+        f"\n"
+        f"📅 오늘({date_str}) 추첨\n"
+        f"🎲 추첨 범위: <b>상위 {n}명</b>\n"
+        f"👥 참여 인원: <b>{len(pool)}명</b>\n"
+        f"\n"
+        f"🎉 당첨자: <b>{html.escape(winner_name)}</b>\n"
+        f"오늘 순위: <b>{winner_rank}위</b>  ·  오늘 채팅 <b>{winner_count:,}회</b>\n"
+        f"\n"
+        f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
+    )
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+
+
 async def cmd_tagsticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.id != ADMIN_ID:
+    if not is_admin(update.message.from_user.id):
         return
     reply = update.message.reply_to_message
     if not reply or not reply.sticker:
@@ -350,7 +454,7 @@ async def cmd_tagsticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 async def cmd_untagsticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.id != ADMIN_ID:
+    if not is_admin(update.message.from_user.id):
         return
     reply = update.message.reply_to_message
     if not reply or not reply.sticker:
@@ -367,7 +471,7 @@ async def cmd_untagsticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 async def cmd_stickerlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    if update.message.from_user.id != ADMIN_ID:
+    if not is_admin(update.message.from_user.id):
         return
     if not sticker_tags:
         await update.message.reply_text("등록된 스티커 태그가 없어요.")
@@ -387,8 +491,8 @@ async def cmd_stickerlist(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 PAGE_SIZE = 10
 
 
-def build_ranking_page(page: int) -> tuple[str, InlineKeyboardMarkup | None]:
-    ranking = get_ranking()
+def build_ranking_page(page: int, stats_dict: dict, title: str, cb_prefix: str) -> tuple[str, InlineKeyboardMarkup | None]:
+    ranking = get_ranking(stats_dict)
     total = len(ranking)
 
     if total == 0:
@@ -401,6 +505,7 @@ def build_ranking_page(page: int) -> tuple[str, InlineKeyboardMarkup | None]:
 
     lines = [
         f"🎣 <b>도파민 가득 채윰</b>",
+        f"<i>{title}</i>",
         f"",
     ]
     for rank, name, count in page_items:
@@ -409,7 +514,7 @@ def build_ranking_page(page: int) -> tuple[str, InlineKeyboardMarkup | None]:
         elif rank - 4 < len(NUMBER_EMOJI):
             medal = NUMBER_EMOJI[rank - 4]
         else:
-            medal = f"<b>{rank}.</b>"
+            medal = f"{rank}."
         lines.append(f"{medal} <b>{html.escape(name)}</b>  <i>{count:,}회</i>")
 
     lines += [
@@ -422,17 +527,24 @@ def build_ranking_page(page: int) -> tuple[str, InlineKeyboardMarkup | None]:
 
     buttons = []
     if page > 1:
-        buttons.append(InlineKeyboardButton("◀️ 이전", callback_data=f"rank_{page - 1}"))
-    buttons.append(InlineKeyboardButton(f"· {page}/{total_pages} ·", callback_data="rank_noop"))
+        buttons.append(InlineKeyboardButton("◀️ 이전", callback_data=f"{cb_prefix}_{page - 1}"))
+    buttons.append(InlineKeyboardButton(f"· {page}/{total_pages} ·", callback_data=f"{cb_prefix}_noop"))
     if page < total_pages:
-        buttons.append(InlineKeyboardButton("다음 ▶️", callback_data=f"rank_{page + 1}"))
+        buttons.append(InlineKeyboardButton("다음 ▶️", callback_data=f"{cb_prefix}_{page + 1}"))
 
     markup = InlineKeyboardMarkup([buttons])
     return text, markup
 
 
 async def cmd_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    text, markup = build_ranking_page(1)
+    text, markup = build_ranking_page(1, chat_stats, "📊 누적 순위", "rank")
+    await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=markup)
+
+
+async def cmd_dayrank(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    ensure_day_reset()
+    date_str = datetime.now(KST).strftime("%m월 %d일")
+    text, markup = build_ranking_page(1, day_stats["stats"], f"📅 오늘({date_str}) 순위", "dayrank")
     await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=markup)
 
 
@@ -440,43 +552,44 @@ async def callback_ranking(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     query = update.callback_query
     await query.answer()
 
-    if query.data == "rank_noop":
+    data = query.data
+    if data.endswith("_noop"):
         return
 
-    page = int(query.data.split("_")[1])
-    text, markup = build_ranking_page(page)
+    if data.startswith("dayrank_"):
+        page = int(data.split("_")[1])
+        ensure_day_reset()
+        date_str = datetime.now(KST).strftime("%m월 %d일")
+        text, markup = build_ranking_page(page, day_stats["stats"], f"📅 오늘({date_str}) 순위", "dayrank")
+    else:
+        page = int(data.split("_")[1])
+        text, markup = build_ranking_page(page, chat_stats, "📊 누적 순위", "rank")
+
     await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=markup)
 
 
 async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    ensure_day_reset()
     user = update.message.from_user
     uid = str(user.id)
-    display_name = html.escape(user.full_name or user.username or uid)
     tag = f"@{user.username}" if user.username else "없음"
 
-    if uid not in chat_stats:
-        text = (
-            f"🎣 <b>도파민 가득 채윰,</b> <i>{display_name}</i>\n"
-            f"\n"
-            f"태그: <b>{html.escape(tag)}</b>\n"
-            f"순위: <b>-</b>\n"
-            f"누적 채팅수: <b>0회</b>\n"
-            f"\n"
-            f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
-        )
-        await update.message.reply_text(text, parse_mode=ParseMode.HTML)
-        return
+    count     = chat_stats.get(uid, {}).get("count", 0)
+    day_count = day_stats["stats"].get(uid, {}).get("count", 0)
 
-    count = chat_stats[uid]["count"]
-    ranking = get_ranking()
-    my_rank = next((r for r, n, _ in ranking if n == chat_stats[uid]["name"]), "?")
+    ranking     = get_ranking(chat_stats)
+    day_ranking = get_ranking(day_stats["stats"])
 
+    my_rank     = next((r for r, n, _ in ranking     if n == chat_stats.get(uid, {}).get("name")), "-") if uid in chat_stats else "-"
+    my_day_rank = next((r for r, n, _ in day_ranking if n == day_stats["stats"].get(uid, {}).get("name")), "-") if uid in day_stats["stats"] else "-"
+
+    date_str = datetime.now(KST).strftime("%m월 %d일")
     text = (
-        f"🎣 <b>도파민 가득 채윰,</b> <i>{display_name}</i>\n"
+        f"🎣 <b>도파민 가득 채윰</b>\n"
         f"\n"
         f"태그: <b>{html.escape(tag)}</b>\n"
-        f"순위: <b>{my_rank}위</b>\n"
-        f"누적 채팅수: <b>{count:,}회</b>\n"
+        f"누적 순위: <b>{my_rank}위</b>  ·  <b>{count:,}회</b>\n"
+        f"오늘({date_str}) 순위: <b>{my_day_rank}위</b>  ·  <b>{day_count:,}회</b>\n"
         f"\n"
         f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
     )
@@ -484,6 +597,21 @@ async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 
 # ── 메시지 핸들러 ────────────────────────────────────────────
+
+async def handle_sticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    if not message or not message.sticker:
+        return
+    fuid = message.sticker.file_unique_id
+    info = sticker_tags.get(fuid)
+    if not info:
+        return
+    uid = info["user_id"]
+    name = html.escape(info["name"])
+    msg = html.escape(info["message"])
+    mention = f'<a href="tg://user?id={uid}">{name}</a>'
+    await message.reply_text(f"{mention} {msg}", parse_mode=ParseMode.HTML)
+
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     message = update.message
@@ -495,17 +623,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_id = user.id
     username = user.full_name or user.username or str(user_id)
 
-    # 채팅 카운트 (5글자 이상 + 1초 쿨다운)
     if len(text) >= 3:
         now = time.time()
         if now - last_chat_time.get(user_id, 0) >= 1.0:
             last_chat_time[user_id] = now
+
             stats = chat_stats.setdefault(str(user_id), {"name": username, "count": 0})
             stats["name"] = username
             stats["count"] += 1
             save_chat_stats()
 
-    # 핑구야 트리거 (누구나 사용 가능)
+            ensure_day_reset()
+            dstats = day_stats["stats"].setdefault(str(user_id), {"name": username, "count": 0})
+            dstats["name"] = username
+            dstats["count"] += 1
+            save_day_stats()
+
     if not text.startswith(TRIGGER):
         return
 
@@ -540,39 +673,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await message.reply_text(reply)
 
 
-async def handle_sticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    message = update.message
-    if not message or not message.sticker:
-        return
-    fuid = message.sticker.file_unique_id
-    info = sticker_tags.get(fuid)
-    if not info:
-        return
-    uid = info["user_id"]
-    name = html.escape(info["name"])
-    msg = html.escape(info["message"])
-    mention = f'<a href="tg://user?id={uid}">{name}</a>'
-    await message.reply_text(f"{mention} {msg}", parse_mode=ParseMode.HTML)
-
-
 # ── 진입점 ───────────────────────────────────────────────────
 
 def main() -> None:
     app = Application.builder().token(TELEGRAM_TOKEN).build()
+
+    app.job_queue.run_daily(
+        job_midnight_ranking,
+        time=dtime(hour=0, minute=0, second=0, tzinfo=KST),
+    )
+
     app.add_handler(CommandHandler(["v1", "v2", "v3"], cmd_version))
-    app.add_handler(CommandHandler("setchat", cmd_setchat))
-    app.add_handler(CommandHandler("approve",   cmd_approve))
-    app.add_handler(CommandHandler("unapprove", cmd_unapprove))
-    app.add_handler(CommandHandler("approved",  cmd_list))
-    app.add_handler(CommandHandler("rank",      cmd_ranking))
-    app.add_handler(CallbackQueryHandler(callback_ranking, pattern=r"^rank_"))
-    app.add_handler(CommandHandler("my",     cmd_myinfo))
-    app.add_handler(CommandHandler("draw",        cmd_draw))
-    app.add_handler(CommandHandler("tagsticker",  cmd_tagsticker))
+    app.add_handler(CommandHandler("setchat",      cmd_setchat))
+    app.add_handler(CommandHandler("setdayrank",   cmd_setdayrank))
+    app.add_handler(CommandHandler("tagsticker",   cmd_tagsticker))
     app.add_handler(CommandHandler("untagsticker", cmd_untagsticker))
-    app.add_handler(CommandHandler("stickerlist", cmd_stickerlist))
+    app.add_handler(CommandHandler("stickerlist",  cmd_stickerlist))
+    app.add_handler(CommandHandler("rank",         cmd_ranking))
+    app.add_handler(CommandHandler("dayrank",      cmd_dayrank))
+    app.add_handler(CallbackQueryHandler(callback_ranking, pattern=r"^(rank|dayrank)_"))
+    app.add_handler(CommandHandler("my",           cmd_myinfo))
+    app.add_handler(CommandHandler("draw",         cmd_draw))
+    app.add_handler(CommandHandler("drawday",      cmd_drawday))
     app.add_handler(MessageHandler(filters.Sticker.ALL, handle_sticker))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
     logger.info("핑구 bot is running...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
