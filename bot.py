@@ -19,9 +19,10 @@ OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o")
 MAX_TOKENS     = int(os.getenv("MAX_TOKENS", "512"))
 MAX_HISTORY    = int(os.getenv("MAX_HISTORY", "20"))
 
-ADMIN_ID         = 7648288400
-APPROVED_FILE    = "approved_users.json"
-CHAT_STATS_FILE  = "chat_stats.json"
+ADMIN_ID          = 7648288400
+APPROVED_FILE     = "approved_users.json"
+CHAT_STATS_FILE   = "chat_stats.json"
+STICKER_TAGS_FILE = "sticker_tags.json"
 
 PROMPTS = {
     1: (
@@ -183,6 +184,23 @@ def get_ranking() -> list[tuple[int, str, int]]:
 
 chat_stats: dict = load_chat_stats()
 
+
+# ── 스티커 태그 ──────────────────────────────────────────────
+
+def load_sticker_tags() -> dict:
+    if os.path.exists(STICKER_TAGS_FILE):
+        with open(STICKER_TAGS_FILE) as f:
+            return json.load(f)
+    return {}
+
+
+def save_sticker_tags() -> None:
+    with open(STICKER_TAGS_FILE, "w") as f:
+        json.dump(sticker_tags, f, ensure_ascii=False)
+
+
+sticker_tags: dict = load_sticker_tags()
+
 LEVEL_THRESHOLDS = [0, 30, 100, 200, 350, 500, 750, 1000, 1500, 2500]
 LEVEL_TITLES = [
     "🌱 새싹", "🐣 병아리", "🐬 돌고래", "🦊 여우",
@@ -298,6 +316,70 @@ async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"<i>💬 채윰이와 신나게 놀아요ฅᐢ..ᐢ₎♡</i>"
     )
     await update.message.reply_text(text, parse_mode=ParseMode.HTML)
+
+
+async def cmd_tagsticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.id != ADMIN_ID:
+        return
+    reply = update.message.reply_to_message
+    if not reply or not reply.sticker:
+        await update.message.reply_text("⚠️ 스티커에 reply 하고 실행해줘.\n예: (스티커에 reply) /tagsticker 123456789 소환됨!")
+        return
+    if not context.args:
+        await update.message.reply_text("사용법: /tagsticker <유저ID> [멘트]\n예: /tagsticker 123456789 어서오세요~")
+        return
+    try:
+        target_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("유저ID는 숫자여야 해요.")
+        return
+
+    custom_msg = " ".join(context.args[1:]) if len(context.args) > 1 else "소환됨! 👆"
+    name = chat_stats.get(str(target_id), {}).get("name", str(target_id))
+    fuid = reply.sticker.file_unique_id
+
+    sticker_tags[fuid] = {"user_id": target_id, "name": name, "message": custom_msg}
+    save_sticker_tags()
+
+    await update.message.reply_text(
+        f"✅ 스티커 태그 등록 완료!\n"
+        f"👤 <b>{html.escape(name)}</b> ({target_id})\n"
+        f"💬 멘트: <b>{html.escape(custom_msg)}</b>",
+        parse_mode=ParseMode.HTML,
+    )
+
+
+async def cmd_untagsticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.id != ADMIN_ID:
+        return
+    reply = update.message.reply_to_message
+    if not reply or not reply.sticker:
+        await update.message.reply_text("⚠️ 스티커에 reply 하고 실행해줘.")
+        return
+    fuid = reply.sticker.file_unique_id
+    if fuid not in sticker_tags:
+        await update.message.reply_text("❌ 해당 스티커는 등록된 태그가 없어요.")
+        return
+    name = sticker_tags[fuid]["name"]
+    del sticker_tags[fuid]
+    save_sticker_tags()
+    await update.message.reply_text(f"🗑 <b>{html.escape(name)}</b> 스티커 태그 삭제 완료!", parse_mode=ParseMode.HTML)
+
+
+async def cmd_stickerlist(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.message.from_user.id != ADMIN_ID:
+        return
+    if not sticker_tags:
+        await update.message.reply_text("등록된 스티커 태그가 없어요.")
+        return
+    lines = ["📋 <b>스티커 태그 목록</b>\n"]
+    for i, (fuid, info) in enumerate(sticker_tags.items(), 1):
+        lines.append(
+            f"{i}. <b>{html.escape(info['name'])}</b> ({info['user_id']})\n"
+            f"   💬 {html.escape(info['message'])}\n"
+            f"   🔑 <code>{fuid}</code>"
+        )
+    await update.message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
 
 
 # ── 공개 명령어 ──────────────────────────────────────────────
@@ -458,6 +540,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await message.reply_text(reply)
 
 
+async def handle_sticker(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.message
+    if not message or not message.sticker:
+        return
+    fuid = message.sticker.file_unique_id
+    info = sticker_tags.get(fuid)
+    if not info:
+        return
+    uid = info["user_id"]
+    name = html.escape(info["name"])
+    msg = html.escape(info["message"])
+    mention = f'<a href="tg://user?id={uid}">{name}</a>'
+    await message.reply_text(f"{mention} {msg}", parse_mode=ParseMode.HTML)
+
+
 # ── 진입점 ───────────────────────────────────────────────────
 
 def main() -> None:
@@ -470,7 +567,11 @@ def main() -> None:
     app.add_handler(CommandHandler("rank",      cmd_ranking))
     app.add_handler(CallbackQueryHandler(callback_ranking, pattern=r"^rank_"))
     app.add_handler(CommandHandler("my",     cmd_myinfo))
-    app.add_handler(CommandHandler("draw",   cmd_draw))
+    app.add_handler(CommandHandler("draw",        cmd_draw))
+    app.add_handler(CommandHandler("tagsticker",  cmd_tagsticker))
+    app.add_handler(CommandHandler("untagsticker", cmd_untagsticker))
+    app.add_handler(CommandHandler("stickerlist", cmd_stickerlist))
+    app.add_handler(MessageHandler(filters.Sticker.ALL, handle_sticker))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     logger.info("핑구 bot is running...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
