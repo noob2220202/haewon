@@ -1,0 +1,27 @@
+body {
+  background: #0f0f1a;
+  color: #e0e0e0;
+}
+.table-dark {
+  --bs-table-bg: #16213e;
+  --bs-table-hover-bg: #1a2a4a;
+}
+.card {
+  border-radius: 10px;
+}
+.page-link {
+  background: #16213e;
+  border-color: #533483;
+  color: #e0e0e0;
+}
+.page-item.active .page-link {
+  background: #533483;
+  border-color: #7c4dff;
+}
+.page-link:hover {
+  background: #533483;
+  color: #fff;
+}
+.nav-link { color: #aaa; }
+.nav-link:hover, .nav-link.active { color: #fff; }
+.text-purple { color: #c084fc; }

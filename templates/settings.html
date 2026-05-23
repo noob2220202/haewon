@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4">⚙️ 설정</h4>
+
+<div class="card" style="background:#16213e;border-color:#533483;">
+  <div class="card-body">
+    <form method="post">
+      <div class="row g-3">
+        {% for key, (label, input_type) in labels.items() %}
+        <div class="col-md-6">
+          <label class="form-label text-light small">{{ label }}</label>
+          <input type="{{ input_type }}" name="{{ key }}" value="{{ current.get(key, '') }}"
+            class="form-control form-control-sm" style="background:#0f3460;border-color:#533483;color:#e0e0e0;">
+        </div>
+        {% endfor %}
+      </div>
+      <hr style="border-color:#533483;">
+      <button type="submit" class="btn btn-primary">💾 저장</button>
+    </form>
+  </div>
+</div>
+
+<div class="mt-4">
+  <div class="card" style="background:#16213e;border-color:#533483;">
+    <div class="card-header text-secondary" style="background:#0f3460;font-size:0.85rem;">설정 가이드</div>
+    <div class="card-body text-secondary" style="font-size:0.82rem;">
+      <ul class="mb-0">
+        <li><b>돌발 포인트 활성화</b>: 1=켜짐, 0=꺼짐. 봇 재시작 후 적용됩니다.</li>
+        <li><b>돌발 최소/최대 간격</b>: 초 단위. 예) 1800=30분, 7200=2시간</li>
+        <li><b>메인 그룹 채팅 ID</b>: 봇이 그룹 채팅에서 메시지를 받으면 자동 설정됩니다.</li>
+        <li><b>일간 포인트</b>: 매일 자정(KST)에 누적 채팅 순위에 따라 자동 지급됩니다.</li>
+        <li><b>연속 출석 보너스</b>: 7일 연속 출석마다 추가로 지급되는 포인트입니다.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

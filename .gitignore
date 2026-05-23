@@ -4,3 +4,7 @@ __pycache__/
 *.pyo
 .venv/
 venv/
+*.db
+*.db-wal
+*.db-shm
+*.json

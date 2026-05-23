@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<h4 class="mb-4">📊 대시보드</h4>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:#16213e;border-color:#533483;">
+      <div class="card-body text-center">
+        <div class="fs-1 fw-bold text-purple">{{ total_users }}</div>
+        <div class="text-secondary small">총 사용자</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:#16213e;border-color:#533483;">
+      <div class="card-body text-center">
+        <div class="fs-1 fw-bold text-warning">{{ '{:,}'.format(total_points) }}</div>
+        <div class="text-secondary small">총 포인트</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:#16213e;border-color:#533483;">
+      <div class="card-body text-center">
+        <div class="fs-1 fw-bold text-info">{{ today_attendance }}</div>
+        <div class="text-secondary small">오늘 출석</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-white" style="background:#16213e;border-color:#533483;">
+      <div class="card-body text-center">
+        <div class="fs-1 fw-bold text-success">{{ total_purchases }}</div>
+        <div class="text-secondary small">총 구매</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 돌발 포인트 토글 -->
+<div class="card mb-4" style="background:#16213e;border-color:#533483;">
+  <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <h6 class="text-white mb-1">🎁 돌발 포인트</h6>
+      <span class="badge {% if surprise_enabled %}bg-success{% else %}bg-secondary{% endif %} fs-6">
+        {% if surprise_enabled %}켜짐 ✅{% else %}꺼짐 ❌{% endif %}
+      </span>
+      <div class="text-secondary small mt-1">봇 프로세스 재시작 시 실제 스케줄에 반영됩니다.</div>
+    </div>
+    <form method="post" action="/surprise_toggle">
+      <button type="submit" class="btn btn-sm {% if surprise_enabled %}btn-danger{% else %}btn-success{% endif %}">
+        {% if surprise_enabled %}끄기{% else %}켜기{% endif %}
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- 최근 포인트 내역 -->
+<div class="card" style="background:#16213e;border-color:#533483;">
+  <div class="card-header text-white" style="background:#0f3460;">최근 포인트 내역</div>
+  <div class="card-body p-0">
+    <table class="table table-dark table-hover mb-0" style="font-size:0.9rem;">
+      <thead><tr><th>사용자</th><th>변화</th><th>사유</th><th>시각</th></tr></thead>
+      <tbody>
+        {% for row in recent_points %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td class="{% if row.delta > 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ '+' if row.delta > 0 else '' }}{{ '{:,}'.format(row.delta) }}P
+          </td>
+          <td><span class="badge bg-secondary">{{ row.reason }}</span></td>
+          <td class="text-secondary small">{{ row.created_at }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="text-center text-secondary py-3">내역이 없어요.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
