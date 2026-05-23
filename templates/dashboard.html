@@ -1,81 +1,107 @@
 {% extends "base.html" %}
+{% block page_title %}대시보드{% endblock %}
 {% block content %}
-<h4 class="mb-4">📊 대시보드</h4>
 
+<div class="section-header mb-18">
+  <div>
+    <div class="section-title">대시보드</div>
+    <div class="section-sub">채윰 봇 현황 한눈에 보기</div>
+  </div>
+</div>
+
+<!-- 통계 카드 -->
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
-    <div class="card text-white" style="background:#16213e;border-color:#533483;">
-      <div class="card-body text-center">
-        <div class="fs-1 fw-bold text-purple">{{ total_users }}</div>
-        <div class="text-secondary small">총 사용자</div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon purple"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="stat-value text-purple">{{ total_users }}</div>
+        <div class="stat-label">총 사용자</div>
       </div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-white" style="background:#16213e;border-color:#533483;">
-      <div class="card-body text-center">
-        <div class="fs-1 fw-bold text-warning">{{ '{:,}'.format(total_points) }}</div>
-        <div class="text-secondary small">총 포인트</div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon amber"><i class="bi bi-coin"></i></div>
+      <div>
+        <div class="stat-value text-amber">{{ '{:,}'.format(total_points) }}</div>
+        <div class="stat-label">총 포인트 유통</div>
       </div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-white" style="background:#16213e;border-color:#533483;">
-      <div class="card-body text-center">
-        <div class="fs-1 fw-bold text-info">{{ today_attendance }}</div>
-        <div class="text-secondary small">오늘 출석</div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon cyan"><i class="bi bi-calendar-check-fill"></i></div>
+      <div>
+        <div class="stat-value text-cyan">{{ today_attendance }}</div>
+        <div class="stat-label">오늘 출석</div>
       </div>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="card text-white" style="background:#16213e;border-color:#533483;">
-      <div class="card-body text-center">
-        <div class="fs-1 fw-bold text-success">{{ total_purchases }}</div>
-        <div class="text-secondary small">총 구매</div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card">
+      <div class="stat-icon green"><i class="bi bi-bag-check-fill"></i></div>
+      <div>
+        <div class="stat-value text-green">{{ total_purchases }}</div>
+        <div class="stat-label">총 구매</div>
       </div>
     </div>
   </div>
 </div>
 
 <!-- 돌발 포인트 토글 -->
-<div class="card mb-4" style="background:#16213e;border-color:#533483;">
-  <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <div>
-      <h6 class="text-white mb-1">🎁 돌발 포인트</h6>
-      <span class="badge {% if surprise_enabled %}bg-success{% else %}bg-secondary{% endif %} fs-6">
-        {% if surprise_enabled %}켜짐 ✅{% else %}꺼짐 ❌{% endif %}
+<div class="toggle-card mb-4">
+  <div class="toggle-info">
+    <h6>🎁 돌발 포인트</h6>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+      <span class="toggle-badge {% if surprise_enabled %}badge-on{% else %}badge-off{% endif %}">
+        {% if surprise_enabled %}<i class="bi bi-circle-fill" style="font-size:7px;"></i> 켜짐{% else %}<i class="bi bi-circle" style="font-size:7px;"></i> 꺼짐{% endif %}
       </span>
-      <div class="text-secondary small mt-1">봇 프로세스 재시작 시 실제 스케줄에 반영됩니다.</div>
+      <p class="text-muted-custom" style="font-size:12px;margin:0;">랜덤 시간마다 그룹에 포인트가 등장해요</p>
     </div>
-    <form method="post" action="/surprise_toggle">
-      <button type="submit" class="btn btn-sm {% if surprise_enabled %}btn-danger{% else %}btn-success{% endif %}">
-        {% if surprise_enabled %}끄기{% else %}켜기{% endif %}
-      </button>
-    </form>
   </div>
+  <form method="post" action="/surprise_toggle">
+    <button type="submit" class="{% if surprise_enabled %}btn-toggle-on{% else %}btn-toggle-off{% endif %}">
+      {% if surprise_enabled %}<i class="bi bi-stop-circle me-1"></i>끄기{% else %}<i class="bi bi-play-circle me-1"></i>켜기{% endif %}
+    </button>
+  </form>
 </div>
 
 <!-- 최근 포인트 내역 -->
-<div class="card" style="background:#16213e;border-color:#533483;">
-  <div class="card-header text-white" style="background:#0f3460;">최근 포인트 내역</div>
-  <div class="card-body p-0">
-    <table class="table table-dark table-hover mb-0" style="font-size:0.9rem;">
-      <thead><tr><th>사용자</th><th>변화</th><th>사유</th><th>시각</th></tr></thead>
+<div class="card">
+  <div class="card-header"><i class="bi bi-clock-history me-2"></i>최근 포인트 내역</div>
+  <div class="table-wrap" style="border:none;border-radius:0;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>사용자</th>
+          <th>변화</th>
+          <th>사유</th>
+          <th>시각</th>
+        </tr>
+      </thead>
       <tbody>
         {% for row in recent_points %}
         <tr>
-          <td>{{ row.name }}</td>
-          <td class="{% if row.delta > 0 %}text-success{% else %}text-danger{% endif %}">
+          <td style="font-weight:500;">{{ row.name }}</td>
+          <td class="{% if row.delta > 0 %}delta-pos{% else %}delta-neg{% endif %}">
             {{ '+' if row.delta > 0 else '' }}{{ '{:,}'.format(row.delta) }}P
           </td>
-          <td><span class="badge bg-secondary">{{ row.reason }}</span></td>
-          <td class="text-secondary small">{{ row.created_at }}</td>
+          <td>
+            {% if row.reason == 'daily_rank' %}<span class="badge badge-purple">일간 랭킹</span>
+            {% elif row.reason == 'attendance' %}<span class="badge badge-cyan">출석</span>
+            {% elif row.reason == 'surprise' %}<span class="badge badge-amber">돌발</span>
+            {% elif 'purchase' in row.reason %}<span class="badge badge-red">구매</span>
+            {% else %}<span class="badge badge-gray">{{ row.reason }}</span>{% endif %}
+          </td>
+          <td style="color:var(--text-3);font-size:12px;">{{ row.created_at }}</td>
         </tr>
         {% else %}
-        <tr><td colspan="4" class="text-center text-secondary py-3">내역이 없어요.</td></tr>
+        <tr><td colspan="4" class="empty-state">내역이 없어요.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
 {% endblock %}

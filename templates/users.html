@@ -1,113 +1,97 @@
 {% extends "base.html" %}
+{% block page_title %}사용자{% endblock %}
 {% block content %}
-<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-  <h4 class="mb-0">👥 사용자 관리</h4>
-  <span class="text-secondary">총 {{ total }}명</span>
+
+<div class="section-header mb-18">
+  <div>
+    <div class="section-title">사용자 관리</div>
+    <div class="section-sub">총 {{ total }}명</div>
+  </div>
+  <form method="get" style="display:flex;gap:8px;align-items:center;">
+    <input type="text" name="q" value="{{ search }}" class="form-input" style="width:200px;" placeholder="이름 검색">
+    <button type="submit" class="btn-outline"><i class="bi bi-search me-1"></i>검색</button>
+    {% if search %}<a href="/users" class="btn-outline">초기화</a>{% endif %}
+  </form>
 </div>
 
-<!-- 검색 -->
-<form method="get" class="d-flex gap-2 mb-3">
-  <input type="text" name="q" value="{{ search }}" class="form-control form-control-sm" style="max-width:220px;background:#16213e;border-color:#533483;color:#e0e0e0;" placeholder="이름 검색">
-  <button type="submit" class="btn btn-sm btn-outline-light">검색</button>
-  {% if search %}<a href="/users" class="btn btn-sm btn-outline-secondary">초기화</a>{% endif %}
-</form>
-
-<div class="table-responsive">
-<table class="table table-dark table-hover align-middle" style="font-size:0.9rem;">
-  <thead>
-    <tr>
-      <th>
-        <a href="/users?sort=user_id&order={% if sort=='user_id' and order=='asc' %}desc{% else %}asc{% endif %}&q={{ search }}" class="text-decoration-none text-light">
-          ID {% if sort=='user_id' %}{{ '↑' if order=='asc' else '↓' }}{% endif %}
-        </a>
-      </th>
-      <th>
-        <a href="/users?sort=name&order={% if sort=='name' and order=='asc' %}desc{% else %}asc{% endif %}&q={{ search }}" class="text-decoration-none text-light">
-          이름 {% if sort=='name' %}{{ '↑' if order=='asc' else '↓' }}{% endif %}
-        </a>
-      </th>
-      <th>
-        <a href="/users?sort=chat_count&order={% if sort=='chat_count' and order=='asc' %}desc{% else %}asc{% endif %}&q={{ search }}" class="text-decoration-none text-light">
-          채팅수 {% if sort=='chat_count' %}{{ '↑' if order=='asc' else '↓' }}{% endif %}
-        </a>
-      </th>
-      <th>
-        <a href="/users?sort=points&order={% if sort=='points' and order=='asc' %}desc{% else %}asc{% endif %}&q={{ search }}" class="text-decoration-none text-light">
-          포인트 {% if sort=='points' %}{{ '↑' if order=='asc' else '↓' }}{% endif %}
-        </a>
-      </th>
-      <th>편집</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in rows %}
-    <tr>
-      <td class="text-secondary">{{ row.user_id }}</td>
-      <td>{{ row.name }}</td>
-      <td>{{ '{:,}'.format(row.chat_count) }}회</td>
-      <td class="text-warning fw-bold">{{ '{:,}'.format(row.points) }}P</td>
-      <td>
-        <button class="btn btn-xs btn-outline-info py-0 px-2" style="font-size:0.78rem;"
-          onclick="openEdit({{ row.user_id }}, '{{ row.name }}', {{ row.chat_count }}, {{ row.points }})">수정</button>
-      </td>
-    </tr>
-    {% else %}
-    <tr><td colspan="5" class="text-center text-secondary py-3">사용자가 없어요.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th><a href="/users?sort=user_id&order={% if sort=='user_id' and order=='asc' %}desc{% else %}asc{% endif %}&q={{ search }}">ID {% if sort=='user_id' %}{{ '↑' if order=='asc' else '↓' }}{% endif %}</a></th>
+        <th><a href="/users?sort=name&order={% if sort=='name' and order=='asc' %}desc{% else %}asc{% endif %}&q={{ search }}">이름 {% if sort=='name' %}{{ '↑' if order=='asc' else '↓' }}{% endif %}</a></th>
+        <th><a href="/users?sort=chat_count&order={% if sort=='chat_count' and order=='asc' %}desc{% else %}asc{% endif %}&q={{ search }}">채팅수 {% if sort=='chat_count' %}{{ '↑' if order=='asc' else '↓' }}{% endif %}</a></th>
+        <th><a href="/users?sort=points&order={% if sort=='points' and order=='asc' %}desc{% else %}asc{% endif %}&q={{ search }}">포인트 {% if sort=='points' %}{{ '↑' if order=='asc' else '↓' }}{% endif %}</a></th>
+        <th>편집</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td style="color:var(--text-3);font-size:12px;">{{ row.user_id }}</td>
+        <td style="font-weight:600;">{{ row.name }}</td>
+        <td>{{ '{:,}'.format(row.chat_count) }}<span style="color:var(--text-3);font-size:11px;margin-left:2px;">회</span></td>
+        <td class="text-amber fw-700">{{ '{:,}'.format(row.points) }}<span style="font-size:11px;font-weight:400;margin-left:1px;">P</span></td>
+        <td>
+          <button class="btn-info-soft" onclick="openEdit({{ row.user_id }},'{{ row.name|e }}',{{ row.chat_count }},{{ row.points }})">
+            <i class="bi bi-pencil me-1"></i>수정
+          </button>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="empty-state">사용자가 없어요.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
-<!-- 페이지네이션 -->
-<nav>
-  <ul class="pagination pagination-sm">
-    {% for p in range(1, total_pages+1) %}
-    <li class="page-item {% if p==page %}active{% endif %}">
-      <a class="page-link" href="/users?page={{ p }}&sort={{ sort }}&order={{ order }}&q={{ search }}">{{ p }}</a>
-    </li>
-    {% endfor %}
-  </ul>
-</nav>
+<div class="pagination mt-3">
+  {% for p in range(1, total_pages+1) %}
+  <a href="/users?page={{ p }}&sort={{ sort }}&order={{ order }}&q={{ search }}" class="page-btn {% if p==page %}active{% endif %}">{{ p }}</a>
+  {% endfor %}
+</div>
 
 <!-- 편집 모달 -->
 <div class="modal fade" id="editModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content" style="background:#16213e;color:#e0e0e0;">
-      <div class="modal-header" style="border-color:#533483;">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
         <h5 class="modal-title">사용자 수정</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body">
-        <p id="editUserName" class="text-secondary mb-3"></p>
-        <form id="editForm" method="post">
-          <input type="hidden" name="field" id="editField">
-          <div class="mb-3">
+      <form id="editForm" method="post">
+        <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+          <p id="editUserName" style="font-size:12px;color:var(--text-3);margin:0;"></p>
+          <input type="hidden" name="field" id="editField" value="points">
+          <div>
             <label class="form-label">새 값</label>
-            <input type="number" name="value" id="editValue" class="form-control" style="background:#0f3460;border-color:#533483;color:#e0e0e0;">
+            <input type="number" name="value" id="editValue" class="form-input">
           </div>
-          <button type="submit" class="btn btn-primary w-100">저장</button>
-        </form>
-      </div>
-      <div class="modal-footer" style="border-color:#533483;">
-        <button class="btn btn-sm btn-outline-info" onclick="setEditField('points')">포인트 수정</button>
-        <button class="btn btn-sm btn-outline-secondary" onclick="setEditField('chat_count')">채팅수 수정</button>
-      </div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn-info-soft" style="flex:1;" onclick="setField('points')">💎 포인트</button>
+            <button type="button" class="btn-outline" style="flex:1;" onclick="setField('chat_count')">💬 채팅수</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-glow" style="width:100%;">저장</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
 
+{% endblock %}
+{% block scripts %}
 <script>
-let currentUid = null;
 function openEdit(uid, name, chat, pts) {
-  currentUid = uid;
-  document.getElementById('editUserName').textContent = `ID: ${uid} | ${name} | 채팅: ${chat} | 포인트: ${pts}P`;
+  document.getElementById('editUserName').textContent = `${name}  ·  채팅 ${chat}회  ·  ${pts}P`;
   document.getElementById('editForm').action = `/users/${uid}/edit`;
   document.getElementById('editField').value = 'points';
   document.getElementById('editValue').value = pts;
   new bootstrap.Modal(document.getElementById('editModal')).show();
 }
-function setEditField(field) {
-  document.getElementById('editField').value = field;
+function setField(f) {
+  document.getElementById('editField').value = f;
 }
 </script>
 {% endblock %}

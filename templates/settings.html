@@ -1,37 +1,88 @@
 {% extends "base.html" %}
+{% block page_title %}설정{% endblock %}
 {% block content %}
-<h4 class="mb-4">⚙️ 설정</h4>
 
-<div class="card" style="background:#16213e;border-color:#533483;">
-  <div class="card-body">
-    <form method="post">
-      <div class="row g-3">
-        {% for key, (label, input_type) in labels.items() %}
-        <div class="col-md-6">
-          <label class="form-label text-light small">{{ label }}</label>
-          <input type="{{ input_type }}" name="{{ key }}" value="{{ current.get(key, '') }}"
-            class="form-control form-control-sm" style="background:#0f3460;border-color:#533483;color:#e0e0e0;">
-        </div>
-        {% endfor %}
-      </div>
-      <hr style="border-color:#533483;">
-      <button type="submit" class="btn btn-primary">💾 저장</button>
-    </form>
+<div class="section-header mb-18">
+  <div>
+    <div class="section-title">설정</div>
+    <div class="section-sub">봇 동작 및 포인트 기준을 조정하세요</div>
   </div>
 </div>
 
-<div class="mt-4">
-  <div class="card" style="background:#16213e;border-color:#533483;">
-    <div class="card-header text-secondary" style="background:#0f3460;font-size:0.85rem;">설정 가이드</div>
-    <div class="card-body text-secondary" style="font-size:0.82rem;">
-      <ul class="mb-0">
-        <li><b>돌발 포인트 활성화</b>: 1=켜짐, 0=꺼짐. 봇 재시작 후 적용됩니다.</li>
-        <li><b>돌발 최소/최대 간격</b>: 초 단위. 예) 1800=30분, 7200=2시간</li>
-        <li><b>메인 그룹 채팅 ID</b>: 봇이 그룹 채팅에서 메시지를 받으면 자동 설정됩니다.</li>
-        <li><b>일간 포인트</b>: 매일 자정(KST)에 누적 채팅 순위에 따라 자동 지급됩니다.</li>
-        <li><b>연속 출석 보너스</b>: 7일 연속 출석마다 추가로 지급되는 포인트입니다.</li>
-      </ul>
+<form method="post">
+  <div class="row g-3 mb-4">
+    <!-- 돌발 포인트 -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-lightning-charge me-2"></i>돌발 포인트</div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% for key in ['surprise_enabled','surprise_min_seconds','surprise_max_seconds','surprise_points'] %}
+            {% set label, itype = labels[key] %}
+            <div class="col-md-3">
+              <label class="form-label">{{ label }}</label>
+              <input type="{{ itype }}" name="{{ key }}" value="{{ current.get(key,'') }}" class="form-input">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 일간 포인트 -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-trophy me-2"></i>일간 랭킹 포인트 (매일 자정 KST 지급)</div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% for key in ['daily_rank_1','daily_rank_2','daily_rank_3','daily_rank_4_10','daily_rank_11_plus'] %}
+            {% set label, itype = labels[key] %}
+            <div class="col-6 col-md">
+              <label class="form-label">{{ label }}</label>
+              <input type="{{ itype }}" name="{{ key }}" value="{{ current.get(key,'') }}" class="form-input">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 출석 -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-calendar-check me-2"></i>출석 포인트</div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% for key in ['attendance_base_pts','attendance_streak_bonus'] %}
+            {% set label, itype = labels[key] %}
+            <div class="col-md-3">
+              <label class="form-label">{{ label }}</label>
+              <input type="{{ itype }}" name="{{ key }}" value="{{ current.get(key,'') }}" class="form-input">
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 기타 -->
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-gear me-2"></i>기타</div>
+        <div class="card-body">
+          {% set label, itype = labels['last_group_chat_id'] %}
+          <div style="max-width:320px;">
+            <label class="form-label">{{ label }}</label>
+            <input type="{{ itype }}" name="last_group_chat_id" value="{{ current.get('last_group_chat_id','') }}" class="form-input" placeholder="자동 설정됨">
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
+
+  <button type="submit" class="btn-glow" style="padding:10px 28px;">
+    <i class="bi bi-floppy me-2"></i>저장
+  </button>
+</form>
+
 {% endblock %}

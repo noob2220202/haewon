@@ -3,47 +3,84 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>🎣 채윰 관리자 패널</title>
+  <title>🎣 채윰 패널</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <nav class="navbar navbar-dark navbar-expand-lg" style="background:#1a1a2e;">
-    <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="/">🎣 채윰 관리자</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="nav">
-        <ul class="navbar-nav me-auto">
-          <li class="nav-item"><a class="nav-link {% if request.path=='/' %}active{% endif %}" href="/">대시보드</a></li>
-          <li class="nav-item"><a class="nav-link {% if '/users' in request.path %}active{% endif %}" href="/users">사용자</a></li>
-          <li class="nav-item"><a class="nav-link {% if '/rankings' in request.path %}active{% endif %}" href="/rankings">랭킹</a></li>
-          <li class="nav-item"><a class="nav-link {% if '/shop' in request.path %}active{% endif %}" href="/shop">상점</a></li>
-          <li class="nav-item"><a class="nav-link {% if '/attendance' in request.path %}active{% endif %}" href="/attendance">출석</a></li>
-          <li class="nav-item"><a class="nav-link {% if '/points' in request.path %}active{% endif %}" href="/points">포인트 내역</a></li>
-          <li class="nav-item"><a class="nav-link {% if '/settings' in request.path %}active{% endif %}" href="/settings">설정</a></li>
-        </ul>
-        <a href="/logout" class="btn btn-outline-light btn-sm">로그아웃</a>
-      </div>
-    </div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <span class="logo-icon">🎣</span>
+    <span class="logo-text">채윰 패널</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="/"           class="nav-item {% if request.path=='/' %}active{% endif %}">
+      <i class="bi bi-speedometer2"></i><span>대시보드</span>
+    </a>
+    <a href="/users"      class="nav-item {% if '/users' in request.path %}active{% endif %}">
+      <i class="bi bi-people"></i><span>사용자</span>
+    </a>
+    <a href="/rankings"   class="nav-item {% if '/rankings' in request.path %}active{% endif %}">
+      <i class="bi bi-trophy"></i><span>랭킹</span>
+    </a>
+    <a href="/shop"       class="nav-item {% if '/shop' in request.path %}active{% endif %}">
+      <i class="bi bi-bag"></i><span>상점</span>
+    </a>
+    <a href="/attendance" class="nav-item {% if '/attendance' in request.path %}active{% endif %}">
+      <i class="bi bi-calendar-check"></i><span>출석</span>
+    </a>
+    <a href="/points"     class="nav-item {% if '/points' in request.path %}active{% endif %}">
+      <i class="bi bi-coin"></i><span>포인트 내역</span>
+    </a>
+    <a href="/settings"   class="nav-item {% if '/settings' in request.path %}active{% endif %}">
+      <i class="bi bi-gear"></i><span>설정</span>
+    </a>
   </nav>
+  <div class="sidebar-footer">
+    <a href="/logout" class="nav-item logout">
+      <i class="bi bi-box-arrow-left"></i><span>로그아웃</span>
+    </a>
+  </div>
+</aside>
 
-  <div class="container-fluid mt-4 px-4">
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for msg in messages %}
-          <div class="alert alert-info alert-dismissible fade show" role="alert">
-            {{ msg }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
 
+<main class="main-content">
+  <header class="topbar">
+    <button class="topbar-toggle" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+    <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+    <div class="topbar-right">
+      <span class="status-dot"></span>
+      <span class="text-muted-custom">운영중</span>
+    </div>
+  </header>
+
+  {% with messages = get_flashed_messages() %}{% if messages %}{% for msg in messages %}
+  <div class="flash-message">
+    <i class="bi bi-check-circle-fill"></i>{{ msg }}
+    <button onclick="this.parentElement.remove()">×</button>
+  </div>
+  {% endfor %}{% endif %}{% endwith %}
+
+  <div class="content-wrapper">
     {% block content %}{% endblock %}
   </div>
+</main>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

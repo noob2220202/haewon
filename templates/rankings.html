@@ -1,64 +1,76 @@
 {% extends "base.html" %}
+{% block page_title %}랭킹{% endblock %}
 {% block content %}
-<h4 class="mb-4">🏆 랭킹</h4>
 
-<ul class="nav nav-tabs mb-3" id="rankTab">
-  <li class="nav-item">
-    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#overall">누적 랭킹</button>
-  </li>
-  <li class="nav-item">
-    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#daily">오늘 일간 랭킹 ({{ today }})</button>
-  </li>
-</ul>
+<div class="section-header mb-18">
+  <div>
+    <div class="section-title">랭킹</div>
+    <div class="section-sub">누적 채팅 기준</div>
+  </div>
+</div>
 
-<div class="tab-content">
-  <div class="tab-pane fade show active" id="overall">
-    <div class="table-responsive">
-    <table class="table table-dark table-hover" style="font-size:0.9rem;">
+<div class="tab-row">
+  <button class="tab-btn active" onclick="switchTab(this,'tab-overall')">🏆 누적 랭킹</button>
+  <button class="tab-btn" onclick="switchTab(this,'tab-daily')">📅 오늘 ({{ today }})</button>
+</div>
+
+<div id="tab-overall" class="tab-panel active">
+  <div class="table-wrap">
+    <table class="data-table">
       <thead><tr><th>#</th><th>이름</th><th>누적 채팅</th><th>포인트</th></tr></thead>
       <tbody>
         {% for row in overall %}
         <tr>
           <td>
-            {% if row.rank == 1 %}🥇
-            {% elif row.rank == 2 %}🥈
-            {% elif row.rank == 3 %}🥉
-            {% else %}{{ row.rank }}{% endif %}
+            {% if row.rank == 1 %}<span style="font-size:17px;">🥇</span>
+            {% elif row.rank == 2 %}<span style="font-size:17px;">🥈</span>
+            {% elif row.rank == 3 %}<span style="font-size:17px;">🥉</span>
+            {% else %}<span style="color:var(--text-3);font-weight:600;">{{ row.rank }}</span>{% endif %}
           </td>
-          <td>{{ row.name }}</td>
-          <td>{{ '{:,}'.format(row.chat_count) }}회</td>
-          <td class="text-warning">{{ '{:,}'.format(row.points) }}P</td>
+          <td style="font-weight:600;">{{ row.name }}</td>
+          <td>{{ '{:,}'.format(row.chat_count) }}<span style="color:var(--text-3);font-size:11px;"> 회</span></td>
+          <td class="text-amber fw-700">{{ '{:,}'.format(row.points) }}<span style="font-weight:400;font-size:11px;">P</span></td>
         </tr>
         {% else %}
-        <tr><td colspan="4" class="text-center text-secondary py-3">데이터 없음</td></tr>
+        <tr><td colspan="4" class="empty-state">데이터가 없어요.</td></tr>
         {% endfor %}
       </tbody>
     </table>
-    </div>
   </div>
+</div>
 
-  <div class="tab-pane fade" id="daily">
-    <div class="table-responsive">
-    <table class="table table-dark table-hover" style="font-size:0.9rem;">
+<div id="tab-daily" class="tab-panel">
+  <div class="table-wrap">
+    <table class="data-table">
       <thead><tr><th>#</th><th>이름</th><th>오늘 채팅</th></tr></thead>
       <tbody>
         {% for row in daily %}
         <tr>
           <td>
-            {% if row.rank == 1 %}🥇
-            {% elif row.rank == 2 %}🥈
-            {% elif row.rank == 3 %}🥉
-            {% else %}{{ row.rank }}{% endif %}
+            {% if row.rank == 1 %}<span style="font-size:17px;">🥇</span>
+            {% elif row.rank == 2 %}<span style="font-size:17px;">🥈</span>
+            {% elif row.rank == 3 %}<span style="font-size:17px;">🥉</span>
+            {% else %}<span style="color:var(--text-3);font-weight:600;">{{ row.rank }}</span>{% endif %}
           </td>
-          <td>{{ row.name }}</td>
-          <td>{{ '{:,}'.format(row.count) }}회</td>
+          <td style="font-weight:600;">{{ row.name }}</td>
+          <td>{{ '{:,}'.format(row.count) }}<span style="color:var(--text-3);font-size:11px;"> 회</span></td>
         </tr>
         {% else %}
-        <tr><td colspan="3" class="text-center text-secondary py-3">오늘 채팅 기록이 없어요.</td></tr>
+        <tr><td colspan="3" class="empty-state">오늘 채팅 기록이 없어요.</td></tr>
         {% endfor %}
       </tbody>
     </table>
-    </div>
   </div>
 </div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function switchTab(btn, id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+</script>
 {% endblock %}

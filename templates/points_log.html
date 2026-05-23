@@ -1,44 +1,47 @@
 {% extends "base.html" %}
+{% block page_title %}포인트 내역{% endblock %}
 {% block content %}
-<div class="d-flex align-items-center justify-content-between mb-3">
-  <h4 class="mb-0">💎 포인트 내역</h4>
-  <span class="text-secondary">총 {{ total }}건</span>
+
+<div class="section-header mb-18">
+  <div>
+    <div class="section-title">포인트 내역</div>
+    <div class="section-sub">총 {{ total }}건</div>
+  </div>
 </div>
 
-<div class="table-responsive">
-<table class="table table-dark table-hover" style="font-size:0.9rem;">
-  <thead><tr><th>사용자</th><th>변화</th><th>사유</th><th>시각</th></tr></thead>
-  <tbody>
-    {% for row in rows %}
-    <tr>
-      <td>{{ row.name }}</td>
-      <td class="fw-bold {% if row.delta > 0 %}text-success{% else %}text-danger{% endif %}">
-        {{ '+' if row.delta > 0 else '' }}{{ '{:,}'.format(row.delta) }}P
-      </td>
-      <td>
-        {% if row.reason == 'daily_rank' %}<span class="badge bg-primary">일간 랭킹</span>
-        {% elif row.reason == 'attendance' %}<span class="badge bg-info text-dark">출석</span>
-        {% elif row.reason == 'surprise' %}<span class="badge bg-warning text-dark">돌발</span>
-        {% elif row.reason.startswith('purchase') %}<span class="badge bg-danger">구매</span>
-        {% elif 'admin' in row.reason %}<span class="badge bg-secondary">관리자</span>
-        {% else %}<span class="badge bg-secondary">{{ row.reason }}</span>{% endif %}
-      </td>
-      <td class="text-secondary small">{{ row.created_at }}</td>
-    </tr>
-    {% else %}
-    <tr><td colspan="4" class="text-center text-secondary py-3">내역이 없어요.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr><th>사용자</th><th>변화</th><th>사유</th><th>시각</th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td style="font-weight:600;">{{ row.name }}</td>
+        <td class="{% if row.delta > 0 %}delta-pos{% else %}delta-neg{% endif %}">
+          {{ '+' if row.delta > 0 else '' }}{{ '{:,}'.format(row.delta) }}P
+        </td>
+        <td>
+          {% if row.reason == 'daily_rank' %}<span class="badge badge-purple">🏆 일간 랭킹</span>
+          {% elif row.reason == 'attendance' %}<span class="badge badge-cyan">📅 출석</span>
+          {% elif row.reason == 'surprise' %}<span class="badge badge-amber">🎁 돌발</span>
+          {% elif 'purchase' in row.reason %}<span class="badge badge-red">🛒 구매</span>
+          {% elif 'admin' in row.reason %}<span class="badge badge-gray">⚙️ 관리자</span>
+          {% else %}<span class="badge badge-gray">{{ row.reason }}</span>{% endif %}
+        </td>
+        <td style="color:var(--text-3);font-size:12px;">{{ row.created_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="empty-state">내역이 없어요.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 
-<nav>
-  <ul class="pagination pagination-sm">
-    {% for p in range(1, total_pages+1) %}
-    <li class="page-item {% if p==page %}active{% endif %}">
-      <a class="page-link" href="/points?page={{ p }}">{{ p }}</a>
-    </li>
-    {% endfor %}
-  </ul>
-</nav>
+<div class="pagination mt-3">
+  {% for p in range(1, total_pages+1) %}
+  <a href="/points?page={{ p }}" class="page-btn {% if p==page %}active{% endif %}">{{ p }}</a>
+  {% endfor %}
+</div>
+
 {% endblock %}

@@ -156,8 +156,8 @@ async def cmd_version(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     text = (
         f"{HEADER}\n"
         f"\n"
-        f"모드: <b>{label}</b>\n"
-        f"<i>대화 기록 전체 초기화됨 🗑</i>\n"
+        f"모드 변경  →  <b>{label}</b>\n"
+        f"<i>대화 기록 초기화 🗑</i>\n"
         f"\n"
         f"{FOOTER}"
     )
@@ -200,7 +200,9 @@ async def cmd_setchat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await db.execute("UPDATE users SET chat_count=? WHERE user_id=?", (amount, uid))
         await db.commit()
     await update.message.reply_text(
-        f"✅ <b>{html.escape(name)}</b> 채팅수 변경\n{old:,}회 → <b>{amount:,}회</b>",
+        f"✅  채팅수 변경\n"
+        f"┣  대상  <b>{html.escape(name)}</b>\n"
+        f"┗  횟수  <b>{old:,}회</b>  →  <b>{amount:,}회</b>",
         parse_mode=ParseMode.HTML,
     )
 
@@ -283,11 +285,11 @@ async def cmd_draw(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = (
         f"{HEADER}\n"
         f"\n"
-        f"🎲 추첨 범위: <b>상위 {n}명</b>\n"
-        f"👥 참여 인원: <b>{len(pool)}명</b>\n"
-        f"\n"
-        f"🎉 당첨자: <b>{html.escape(wname)}</b>\n"
-        f"순위: <b>{wrank}위</b>  ·  채팅 <b>{wcount:,}회</b>\n"
+        f"🎲  추첨 결과\n"
+        f"┣  범위  상위 <b>{n}명</b>  ·  참여 <b>{len(pool)}명</b>\n"
+        f"┃\n"
+        f"┗  🎉  <b>{html.escape(wname)}</b>\n"
+        f"   <b>{wrank}위</b>  ·  채팅 <b>{wcount:,}회</b>\n"
         f"\n"
         f"{FOOTER}"
     )
@@ -402,8 +404,10 @@ async def cmd_give_points(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await db.commit()
     sign = "+" if delta >= 0 else ""
     await update.message.reply_text(
-        f"✅ <b>{html.escape(name)}</b> 포인트 지급\n"
-        f"{sign}{delta:,}P → 잔여 <b>{new_pts:,}P</b>",
+        f"✅  포인트 지급\n"
+        f"┣  대상  <b>{html.escape(name)}</b>\n"
+        f"┣  변화  <b>{sign}{delta:,}P</b>\n"
+        f"┗  잔여  <b>{new_pts:,}P</b>",
         parse_mode=ParseMode.HTML,
     )
 
@@ -439,8 +443,8 @@ async def job_send_surprise(context: ContextTypes.DEFAULT_TYPE) -> None:
             text=(
                 f"{HEADER}\n"
                 f"\n"
-                f"🎁 <b>돌발 포인트 등장!</b>\n"
-                f"💰 <b>{amount}P</b> 를 먼저 클릭한 사람이 가져가요!\n"
+                f"🎁  <b>돌발 포인트 등장!</b>\n"
+                f"┗  💰  <b>{amount}P</b>  먼저 누르는 사람이 가져가요!\n"
                 f"\n"
                 f"{FOOTER}"
             ),
@@ -492,8 +496,9 @@ async def callback_surprise(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     await query.edit_message_text(
         f"{HEADER}\n"
         f"\n"
-        f"🎉 <b>{html.escape(uname)}</b> 님이 <b>{amount}P</b> 획득!\n"
-        f"⚡ 반응 속도: <b>{elapsed:.1f}초</b>\n"
+        f"🎉  <b>{html.escape(uname)}</b> 님 획득!\n"
+        f"┣  💰  <b>+{amount}P</b>\n"
+        f"┗  ⚡  반응 속도  <b>{elapsed:.1f}초</b>\n"
         f"\n"
         f"{FOOTER}",
         parse_mode=ParseMode.HTML,
@@ -507,7 +512,12 @@ async def cmd_surprise_on(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         await set_config(db, "surprise_enabled", "1")
     await schedule_next_surprise(context.job_queue)
     await update.message.reply_text(
-        f"{HEADER}\n\n돌발 포인트: <b>켜짐 ✅</b>\n\n{FOOTER}", parse_mode=ParseMode.HTML
+        f"{HEADER}\n"
+        f"\n"
+        f"┗  🎁  돌발 포인트  <b>켜짐 ✅</b>\n"
+        f"\n"
+        f"{FOOTER}",
+        parse_mode=ParseMode.HTML,
     )
 
 
@@ -519,7 +529,12 @@ async def cmd_surprise_off(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     for job in context.job_queue.get_jobs_by_name("surprise"):
         job.schedule_removal()
     await update.message.reply_text(
-        f"{HEADER}\n\n돌발 포인트: <b>꺼짐 ❌</b>\n\n{FOOTER}", parse_mode=ParseMode.HTML
+        f"{HEADER}\n"
+        f"\n"
+        f"┗  🎁  돌발 포인트  <b>꺼짐 ❌</b>\n"
+        f"\n"
+        f"{FOOTER}",
+        parse_mode=ParseMode.HTML,
     )
 
 
@@ -567,15 +582,17 @@ async def job_daily_points(context: ContextTypes.DEFAULT_TYPE) -> None:
     if not chat_id_str:
         return
 
-    lines = [HEADER, "", "🏆 <b>오늘의 채팅 랭킹 포인트 지급!</b>", ""]
+    lines = [HEADER, "", "🏆  <b>오늘의 채팅 랭킹 결산!</b>", ""]
     for rank, name, pts in results[:10]:
         if rank <= 3:
             medal = RANK_MEDALS[rank - 1]
         elif rank - 4 < len(NUMBER_EMOJI):
             medal = NUMBER_EMOJI[rank - 4]
         else:
-            medal = f"<b>{rank}.</b>"
-        lines.append(f"{medal} <b>{html.escape(name)}</b>  <i>+{pts}P</i>")
+            medal = f"{rank}."
+        is_last = (rank == min(10, len(results)))
+        prefix = "┗" if is_last else "┣"
+        lines.append(f"{prefix}  {medal}  <b>{html.escape(name)}</b>  <i>+{pts}P</i>")
     lines += ["", FOOTER]
     try:
         await context.bot.send_message(
@@ -626,11 +643,13 @@ async def build_ranking_page(page: int) -> tuple[str, InlineKeyboardMarkup | Non
         elif rank - 4 < len(NUMBER_EMOJI):
             medal = NUMBER_EMOJI[rank - 4]
         else:
-            medal = f"<b>{rank}.</b>"
-        lines.append(f"{medal} <b>{html.escape(name)}</b>  <i>{count:,}회</i>")
+            medal = f"{rank}."
+        is_last = (i == len(page_items) - 1)
+        prefix = "┗" if is_last else "┣"
+        lines.append(f"{prefix}  {medal}  <b>{html.escape(name)}</b>  <i>{count:,}회</i>")
     lines += [
         "",
-        f"<i>📄 {page} / {total_pages} 페이지  |  총 {total}명</i>",
+        f"<i>·  {page} / {total_pages}  ·  총 {total}명</i>",
         "",
         FOOTER,
     ]
@@ -669,27 +688,27 @@ async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     streak = att_row["streak"] if att_row else 0
     if not row:
         text = (
-            f"{HEADER}, <i>{display_name}</i>\n"
+            f"{HEADER}  <i>{display_name}</i>\n"
             f"\n"
-            f"태그: <b>{html.escape(tag)}</b>\n"
-            f"순위: <b>-</b>\n"
-            f"누적 채팅수: <b>0회</b>\n"
-            f"💎 포인트: <b>0P</b>\n"
-            f"🔥 연속 출석: <b>0일</b>\n"
+            f"┣  태그  <b>{html.escape(tag)}</b>\n"
+            f"┣  순위  <b>—</b>\n"
+            f"┣  채팅  <b>0회</b>\n"
+            f"┣  💎  <b>0P</b>\n"
+            f"┗  🔥  연속 <b>0일</b>\n"
             f"\n"
             f"{FOOTER}"
         )
     else:
         uid_list = [r[0] for r in rank_rows]
-        my_rank = uid_list.index(uid) + 1 if uid in uid_list else "-"
+        my_rank = uid_list.index(uid) + 1 if uid in uid_list else "—"
         text = (
-            f"{HEADER}, <i>{display_name}</i>\n"
+            f"{HEADER}  <i>{display_name}</i>\n"
             f"\n"
-            f"태그: <b>{html.escape(tag)}</b>\n"
-            f"순위: <b>{my_rank}위</b>\n"
-            f"누적 채팅수: <b>{row['chat_count']:,}회</b>\n"
-            f"💎 포인트: <b>{row['points']:,}P</b>\n"
-            f"🔥 연속 출석: <b>{streak}일</b>\n"
+            f"┣  태그  <b>{html.escape(tag)}</b>\n"
+            f"┣  순위  <b>{my_rank}위</b>\n"
+            f"┣  채팅  <b>{row['chat_count']:,}회</b>\n"
+            f"┣  💎  <b>{row['points']:,}P</b>\n"
+            f"┗  🔥  연속 <b>{streak}일</b>\n"
             f"\n"
             f"{FOOTER}"
         )
@@ -722,9 +741,9 @@ async def cmd_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             text = (
                 f"{HEADER}\n"
                 f"\n"
-                f"⚠️ 오늘 이미 출석했어요!\n"
-                f"📅 출석일: <b>{today}</b>\n"
-                f"🔥 연속 출석: <b>{existing['streak']}일째</b>\n"
+                f"⚠️  오늘 이미 출석했어요!\n"
+                f"┣  📅  <b>{today}</b>\n"
+                f"┗  🔥  연속 <b>{existing['streak']}일째</b>\n"
                 f"\n"
                 f"{FOOTER}"
             )
@@ -759,15 +778,15 @@ async def cmd_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
         await db.commit()
 
-    bonus_note = f"  (기본 {base_pts} + 연속 보너스 {bonus})" if bonus > 0 else ""
+    bonus_note = f"  <i>(+{bonus} 연속 보너스)</i>" if bonus > 0 else ""
     text = (
         f"{HEADER}\n"
         f"\n"
-        f"✅ <b>{html.escape(uname)}</b> 출석 완료!\n"
-        f"📅 날짜: <b>{today}</b>\n"
-        f"🔥 연속 출석: <b>{streak}일째</b>\n"
-        f"💰 획득 포인트: <b>+{pts}P</b>{bonus_note}\n"
-        f"💎 보유 포인트: <b>{total_pts:,}P</b>\n"
+        f"✅  <b>{html.escape(uname)}</b>  출석 완료!\n"
+        f"┣  📅  <b>{today}</b>\n"
+        f"┣  🔥  연속 <b>{streak}일째</b>\n"
+        f"┣  💰  <b>+{pts}P</b>  획득{bonus_note}\n"
+        f"┗  💎  잔여  <b>{total_pts:,}P</b>\n"
         f"\n"
         f"{FOOTER}"
     )
@@ -795,21 +814,22 @@ async def cmd_points(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
     if not row:
         text = (
-            f"{HEADER}, <i>{display_name}</i>\n"
+            f"{HEADER}  <i>{display_name}</i>\n"
             f"\n"
-            f"💎 보유 포인트: <b>0P</b>\n"
+            f"💎  <b>0P</b>\n"
             f"\n"
             f"{FOOTER}"
         )
     else:
         uid_list = [r[0] for r in rank_rows]
-        chat_rank = uid_list.index(uid) + 1 if uid in uid_list else "-"
+        chat_rank = uid_list.index(uid) + 1 if uid in uid_list else "—"
         text = (
-            f"{HEADER}, <i>{display_name}</i>\n"
+            f"{HEADER}  <i>{display_name}</i>\n"
             f"\n"
-            f"💎 보유 포인트: <b>{row['points']:,}P</b>\n"
-            f"📊 채팅 순위: <b>{chat_rank}위</b>\n"
-            f"🏆 누적 채팅: <b>{row['chat_count']:,}회</b>\n"
+            f"💎  <b>{row['points']:,}P</b>\n"
+            f"\n"
+            f"┣  📊  채팅 순위  <b>{chat_rank}위</b>\n"
+            f"┗  🏆  누적 채팅  <b>{row['chat_count']:,}회</b>\n"
             f"\n"
             f"{FOOTER}"
         )
@@ -838,18 +858,18 @@ async def build_shop_page(page: int) -> tuple[str, InlineKeyboardMarkup | None]:
 
     NUMBER_EMOJI_SHOP = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
 
-    lines = [HEADER, "", "🛒 <b>채윰 상점</b>", ""]
+    lines = [HEADER, "", "🛒  <b>채윰 상점</b>", ""]
     for i, item in enumerate(page_items):
         num = NUMBER_EMOJI_SHOP[i] if i < len(NUMBER_EMOJI_SHOP) else f"{start + i + 1}."
         stock_label = "무제한" if item["stock"] == -1 else f"{item['stock']}개"
+        desc = f"\n   <i>{html.escape(item['description'])}</i>" if item["description"] else ""
         lines.append(
-            f"{num} <b>{html.escape(item['name'])}</b>  (<code>#{item['id']}</code>)\n"
-            f"   {html.escape(item['description'])}\n"
-            f"   💰 <b>{item['price']:,}P</b>  |  재고: <b>{stock_label}</b>"
+            f"{num}  <b>{html.escape(item['name'])}</b>  <code>#{item['id']}</code>{desc}\n"
+            f"   💰  <b>{item['price']:,}P</b>  ·  재고  <b>{stock_label}</b>"
         )
     lines += [
         "",
-        f"<i>📄 {page} / {total_pages} 페이지  |  총 {total}개</i>",
+        f"<i>· {page} / {total_pages}  ·  총 {total}개</i>",
         "",
         FOOTER,
     ]
@@ -924,9 +944,12 @@ async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         if my_pts < item["price"]:
             await update.message.reply_text(
-                f"{HEADER}\n\n"
-                f"❌ 포인트가 부족해요!\n"
-                f"💰 필요: <b>{item['price']:,}P</b>  |  보유: <b>{my_pts:,}P</b>\n\n"
+                f"{HEADER}\n"
+                f"\n"
+                f"❌  포인트가 부족해요!\n"
+                f"┣  필요  <b>{item['price']:,}P</b>\n"
+                f"┗  보유  <b>{my_pts:,}P</b>\n"
+                f"\n"
                 f"{FOOTER}",
                 parse_mode=ParseMode.HTML,
             )
@@ -947,11 +970,13 @@ async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await db.commit()
 
     await update.message.reply_text(
-        f"{HEADER}\n\n"
-        f"✅ 구매 완료!\n"
-        f"🛒 <b>{html.escape(item['name'])}</b>\n"
-        f"💰 차감 포인트: <b>-{item['price']:,}P</b>\n"
-        f"💎 잔여 포인트: <b>{new_pts:,}P</b>\n\n"
+        f"{HEADER}\n"
+        f"\n"
+        f"✅  구매 완료!\n"
+        f"┣  🛒  <b>{html.escape(item['name'])}</b>\n"
+        f"┣  💰  <b>-{item['price']:,}P</b>  차감\n"
+        f"┗  💎  잔여  <b>{new_pts:,}P</b>\n"
+        f"\n"
         f"{FOOTER}",
         parse_mode=ParseMode.HTML,
     )
