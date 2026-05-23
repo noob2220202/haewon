@@ -885,7 +885,7 @@ async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     if not context.args:
         await update.message.reply_text(
-            f"{HEADER}\n\n사용법: /구매 [아이템번호]\n예: /구매 1\n\n/상점 에서 번호를 확인하세요.\n\n{FOOTER}",
+            f"{HEADER}\n\n사용법: /buy [아이템번호]\n예: /buy 1\n\n/shop 에서 번호를 확인하세요.\n\n{FOOTER}",
             parse_mode=ParseMode.HTML,
         )
         return
@@ -903,7 +903,7 @@ async def cmd_buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             item = await cur.fetchone()
         if not item:
             await update.message.reply_text(
-                f"{HEADER}\n\n❌ 해당 아이템이 없어요. /상점 을 확인해주세요.\n\n{FOOTER}",
+                f"{HEADER}\n\n❌ 해당 아이템이 없어요. /shop 을 확인해주세요.\n\n{FOOTER}",
                 parse_mode=ParseMode.HTML,
             )
             return
@@ -1066,17 +1066,17 @@ def main() -> None:
     app.add_handler(CommandHandler("stickerlist",  cmd_stickerlist))
     app.add_handler(CommandHandler("rank",         cmd_ranking))
     app.add_handler(CallbackQueryHandler(callback_ranking, pattern=r"^rank_"))
-    app.add_handler(CommandHandler(["my", "내정보"], cmd_myinfo))
+    app.add_handler(CommandHandler(["my", "info"], cmd_myinfo))
 
     # 신규 명령어
-    app.add_handler(CommandHandler("출석",      cmd_attendance))
-    app.add_handler(CommandHandler("포인트",     cmd_points))
-    app.add_handler(CommandHandler("상점",      cmd_shop))
+    app.add_handler(CommandHandler("attend",      cmd_attendance))
+    app.add_handler(CommandHandler("points",      cmd_points))
+    app.add_handler(CommandHandler("shop",        cmd_shop))
     app.add_handler(CallbackQueryHandler(callback_shop, pattern=r"^shop_"))
-    app.add_handler(CommandHandler(["구매", "buy"], cmd_buy))
-    app.add_handler(CommandHandler("포인트지급",  cmd_give_points))
-    app.add_handler(CommandHandler("돌발on",    cmd_surprise_on))
-    app.add_handler(CommandHandler("돌발off",   cmd_surprise_off))
+    app.add_handler(CommandHandler("buy",         cmd_buy))
+    app.add_handler(CommandHandler("givepoints",  cmd_give_points))
+    app.add_handler(CommandHandler("surpriseon",  cmd_surprise_on))
+    app.add_handler(CommandHandler("surpriseoff", cmd_surprise_off))
     app.add_handler(CallbackQueryHandler(callback_surprise, pattern=r"^surprise_"))
 
     # 메시지 핸들러 (마지막에 등록)
