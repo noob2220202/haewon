@@ -40,11 +40,9 @@ def _cleanup_cooldown():
 
 # ── message counting ──────────────────────────────────────────────────────────
 
-@router.message(F.text)
+@router.message(F.text & ~F.text.startswith("/"))
 async def on_message(message: Message, bot: Bot):
     if not message.from_user:
-        return
-    if message.text and message.text.startswith("/"):
         return
 
     cfg = await get_cfg()
