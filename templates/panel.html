@@ -34,7 +34,7 @@ body::after{width:400px;height:400px;background:rgba(92,200,255,0.12);bottom:-80
 .layout{display:flex;min-height:100vh;position:relative;z-index:1}
 
 /* ── overlay ── */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99;backdrop-filter:blur(2px)}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
 .overlay.show{display:block}
 
 /* ── mobile header ── */
@@ -201,26 +201,29 @@ input:checked+.slider::before{transform:translateX(20px)}
 @media(max-width:768px){
   .mobile-header{display:flex}
   .layout{padding-top:56px}
+  /* 사이드바: 기본 숨김, 열릴 때만 고정 오버레이 */
   .sidebar{
-    position:fixed;top:56px;left:0;height:calc(100vh - 56px);
-    transform:translateX(-100%);z-index:100;
-    width:var(--sidebar-w);
+    display:none;
+    position:fixed;top:56px;left:0;
+    height:calc(100vh - 56px);
+    width:240px;z-index:100;
+    background:#0d0d14;
+    backdrop-filter:none;
+    box-shadow:4px 0 32px rgba(0,0,0,.7);
   }
-  .sidebar.open{transform:translateX(0)}
+  .sidebar.open{display:flex}
+  /* 모바일에서 blur 전부 제거 */
+  .card,.stat-card{backdrop-filter:none}
+  body::before,body::after{display:none}
   .main{padding:16px}
   .page-title{font-size:1.2rem}
   .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
   .stat-value{font-size:1.8rem}
-  /* 테이블 숨기고 카드 보임 */
   .table-wrap.users-table{display:none}
   .user-cards{display:flex}
   .rewards-grid{grid-template-columns:repeat(5,1fr);gap:6px}
   .reward-item input{padding:6px 2px;font-size:0.8rem}
   .card{padding:16px;border-radius:16px}
-}
-@media(max-width:480px){
-  .stats-grid{grid-template-columns:repeat(2,1fr)}
-  .rewards-grid{grid-template-columns:repeat(5,1fr)}
 }
 </style>
 </head>
