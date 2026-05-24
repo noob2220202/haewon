@@ -163,6 +163,30 @@ async def set_points(user_id: int, new_points: int, memo: str = ""):
         await db.commit()
 
 
+async def set_user_stats(user_id: int, total_chat: int, daily_chat: int, points: int):
+    ymd = today_ymd()
+    async with get_db() as db:
+        cur = await db.execute("SELECT points FROM users WHERE user_id=?", (user_id,))
+        row = await cur.fetchone()
+        old_pts = row["points"] if row else 0
+        delta = points - old_pts
+        await db.execute(
+            "UPDATE users SET total_chat=?, points=? WHERE user_id=?",
+            (total_chat, points, user_id),
+        )
+        await db.execute(
+            "INSERT INTO daily(user_id,ymd,chat_count) VALUES(?,?,?) "
+            "ON CONFLICT(user_id,ymd) DO UPDATE SET chat_count=?",
+            (user_id, ymd, daily_chat, daily_chat),
+        )
+        if delta != 0:
+            await db.execute(
+                "INSERT INTO log(user_id,delta,reason,memo,created_at) VALUES(?,?,?,?,?)",
+                (user_id, delta, "admin_edit", "웹 관리자 수정", now_kst()),
+            )
+        await db.commit()
+
+
 # ── ranking ────────────────────────────────────────────────────────────────
 
 async def get_daily_rank(ymd: str | None = None, limit: int = 50):

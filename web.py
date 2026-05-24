@@ -100,12 +100,17 @@ async def users_page(request: Request, q: str = ""):
     })
 
 
-@app.post("/users/{user_id}/points")
-async def update_points(request: Request, user_id: int, points: int = Form(...)):
+@app.post("/users/{user_id}/edit")
+async def update_user(
+    request: Request, user_id: int,
+    total_chat: int = Form(...),
+    daily_chat: int = Form(...),
+    points: int = Form(...),
+):
     if not check_session(request):
         raise HTTPException(status_code=401)
-    await db.set_points(user_id, points, "웹 관리자 수정")
-    return RedirectResponse("/users", status_code=303)
+    await db.set_user_stats(user_id, total_chat, daily_chat, points)
+    return RedirectResponse(f"/users?q={request.query_params.get('q','')}", status_code=303)
 
 
 # ── config: settle ─────────────────────────────────────────────────────────

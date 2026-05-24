@@ -22,82 +22,86 @@
   --danger:#ff5c7c;
   --success:#4cffb0;
   --gradient:linear-gradient(135deg,#7c5cff,#5cc8ff);
+  --sidebar-w:220px;
 }
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Pretendard',-apple-system,sans-serif;font-size:15px;line-height:1.6}
 
-/* blobs */
 body::before,body::after{content:'';position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
 body::before{width:500px;height:500px;background:rgba(124,92,255,0.15);top:-100px;left:-100px}
 body::after{width:400px;height:400px;background:rgba(92,200,255,0.12);bottom:-80px;right:-80px}
 
-/* layout */
+/* ── layout ── */
 .layout{display:flex;min-height:100vh;position:relative;z-index:1}
 
-/* sidebar */
+/* ── overlay ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99;backdrop-filter:blur(2px)}
+.overlay.show{display:block}
+
+/* ── mobile header ── */
+.mobile-header{
+  display:none;position:fixed;top:0;left:0;right:0;height:56px;
+  background:rgba(10,10,15,.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);z-index:98;
+  align-items:center;padding:0 16px;gap:12px;
+}
+.mobile-header .gem{font-size:1.3rem}
+.mobile-header .title{font-size:1rem;font-weight:700;background:var(--gradient);-webkit-background-clip:text;color:transparent;flex:1}
+.hamburger{background:none;border:none;color:var(--text);font-size:1.4rem;cursor:pointer;padding:4px;line-height:1;border-radius:8px;transition:background .2s}
+.hamburger:hover{background:var(--surface-hover)}
+
+/* ── sidebar ── */
 .sidebar{
-  width:220px;flex-shrink:0;
-  background:rgba(255,255,255,0.03);
+  width:var(--sidebar-w);flex-shrink:0;
+  background:rgba(10,10,15,.95);backdrop-filter:blur(20px);
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;
   padding:24px 16px;
   position:sticky;top:0;height:100vh;overflow-y:auto;
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
 }
-.sidebar-logo{
-  display:flex;align-items:center;gap:10px;
-  padding:0 8px 24px;border-bottom:1px solid var(--border);margin-bottom:24px;
-}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:0 8px 24px;border-bottom:1px solid var(--border);margin-bottom:24px}
 .sidebar-logo .gem{font-size:1.6rem}
 .sidebar-logo span{font-size:1rem;font-weight:700;background:var(--gradient);-webkit-background-clip:text;color:transparent}
-.nav-item{
-  display:flex;align-items:center;gap:10px;
-  padding:10px 12px;border-radius:12px;
-  color:var(--muted);text-decoration:none;font-size:0.9rem;font-weight:500;
-  transition:all .2s;margin-bottom:2px;
-}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;color:var(--muted);text-decoration:none;font-size:0.9rem;font-weight:500;transition:all .2s;margin-bottom:2px}
 .nav-item:hover{background:var(--surface-hover);color:var(--text)}
 .nav-item.active{background:rgba(124,92,255,0.15);color:var(--accent);border:1px solid rgba(124,92,255,0.2)}
 .nav-item .icon{font-size:1.1rem;width:22px;text-align:center}
 .sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid var(--border)}
 .sidebar-footer a{display:block;padding:8px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:0.85rem;transition:all .2s}
-.sidebar-footer a:hover{color:var(--danger);background:rgba(255,92,124,0.08)}
+.sidebar-footer a:hover{color:var(--danger);background:rgba(255,92,124,.08)}
 
-/* main */
+/* ── main ── */
 .main{flex:1;padding:32px;overflow-y:auto;min-width:0}
 .page-title{font-size:1.5rem;font-weight:700;margin-bottom:24px;display:flex;align-items:center;gap:10px}
 
-/* card */
-.card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:20px;backdrop-filter:blur(20px);
-  box-shadow:0 8px 40px rgba(0,0,0,.4);
-  padding:24px;transition:transform .2s,border-color .2s,box-shadow .2s;
-}
+/* ── card ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:20px;backdrop-filter:blur(20px);box-shadow:0 8px 40px rgba(0,0,0,.4);padding:24px;transition:transform .2s,border-color .2s,box-shadow .2s}
 .card:hover{transform:translateY(-2px);border-color:var(--border-glow);box-shadow:0 12px 48px rgba(124,92,255,.15)}
 
-/* stat grid */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+/* ── stats ── */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;transition:all .2s}
 .stat-card:hover{transform:translateY(-2px);border-color:var(--border-glow);box-shadow:0 8px 32px rgba(124,92,255,.12)}
-.stat-label{font-size:0.8rem;color:var(--muted);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.stat-label{font-size:0.78rem;color:var(--muted);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
 .stat-value{font-family:'Space Grotesk',monospace;font-size:2.2rem;font-weight:700;background:var(--gradient);-webkit-background-clip:text;color:transparent;line-height:1.1}
 .stat-value.gold{background:linear-gradient(135deg,#ffd479,#ffaa00);-webkit-background-clip:text;color:transparent}
 
-/* table */
+/* ── table ── */
 .table-wrap{overflow-x:auto;border-radius:16px;border:1px solid var(--border)}
 table{width:100%;border-collapse:collapse}
-thead th{padding:12px 16px;text-align:left;font-size:0.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)}
+thead th{padding:12px 16px;text-align:left;font-size:0.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);white-space:nowrap}
 tbody tr{transition:background .15s}
 tbody tr:hover{background:var(--surface-hover)}
-tbody td{padding:12px 16px;font-size:0.88rem;border-bottom:1px solid rgba(255,255,255,0.04)}
+tbody td{padding:12px 16px;font-size:0.88rem;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle}
 tbody tr:last-child td{border-bottom:none}
-.mono{font-family:'Space Grotesk',monospace;font-size:0.92rem}
+.mono{font-family:'Space Grotesk',monospace;font-size:0.9rem}
 .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:600}
 .badge-settle{background:rgba(124,92,255,.2);color:#b8a4ff}
 .badge-surprise{background:rgba(92,200,255,.2);color:#8de8ff}
 .badge-admin_edit{background:rgba(255,212,121,.15);color:var(--gold)}
 .pos{color:var(--success)}.neg{color:var(--danger)}
 
-/* form */
+/* ── form elements ── */
 .form-group{margin-bottom:18px}
 label{display:block;font-size:0.82rem;color:var(--muted);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
 input[type=text],input[type=number],input[type=password]{
@@ -108,8 +112,8 @@ input[type=text],input[type=number],input[type=password]{
 input:focus{border-color:var(--accent)}
 input::placeholder{color:var(--muted)}
 
-/* btn */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:inherit}
+/* ── btn ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:inherit;text-decoration:none;white-space:nowrap}
 .btn-primary{background:var(--gradient);color:#fff;box-shadow:0 4px 20px rgba(124,92,255,.3)}
 .btn-primary:hover{box-shadow:0 6px 28px rgba(124,92,255,.5);transform:translateY(-1px)}
 .btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
@@ -117,32 +121,74 @@ input::placeholder{color:var(--muted)}
 .btn-danger{background:rgba(255,92,124,.15);border:1px solid rgba(255,92,124,.3);color:var(--danger)}
 .btn-danger:hover{background:rgba(255,92,124,.25)}
 .btn-sm{padding:6px 12px;font-size:0.8rem;border-radius:8px}
+.btn-icon{padding:6px 10px;font-size:1rem;border-radius:8px}
 
-/* toggle */
+/* ── toggle ── */
 .toggle-wrap{display:flex;align-items:center;gap:12px;margin-bottom:20px}
 .toggle-wrap label{margin:0;font-size:0.9rem;color:var(--text);text-transform:none;letter-spacing:0}
-.toggle{position:relative;display:inline-block;width:46px;height:26px}
+.toggle{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0}
 .slider{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:13px;cursor:pointer;transition:.3s;border:1px solid var(--border)}
 .slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 input:checked+.slider{background:var(--accent);border-color:var(--accent)}
 input:checked+.slider::before{transform:translateX(20px)}
 
-/* rewards grid */
+/* ── rewards ── */
 .rewards-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
 .reward-item{text-align:center}
 .reward-item label{margin-bottom:6px;font-size:0.75rem;color:var(--gold)}
-.reward-item input{text-align:center;font-family:'Space Grotesk',monospace}
+.reward-item input{text-align:center;font-family:'Space Grotesk',monospace;padding:8px 4px}
 
-/* search */
+/* ── search ── */
 .search-bar{display:flex;gap:10px;margin-bottom:20px}
 .search-bar input{flex:1}
 
-/* inline edit */
-.edit-form{display:flex;gap:6px;align-items:center}
-.edit-form input{width:90px;padding:6px 10px}
+/* ── user edit row ── */
+.edit-row{display:none;background:rgba(124,92,255,0.05) !important}
+.edit-row.open{display:table-row}
+.edit-row td{padding:12px 16px;border-bottom:1px solid rgba(124,92,255,.15) !important}
+.edit-fields{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+.edit-field{display:flex;flex-direction:column;gap:4px;min-width:110px}
+.edit-field label{font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:0}
+.edit-field input{width:100%;background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:'Space Grotesk',monospace;font-size:0.88rem;outline:none;transition:border-color .2s}
+.edit-field input:focus{border-color:var(--accent)}
+.edit-actions{display:flex;gap:8px;align-items:flex-end;padding-bottom:1px}
 
-/* login */
+/* ── mobile user cards ── */
+.user-cards{display:none;flex-direction:column;gap:12px}
+.user-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;transition:border-color .2s}
+.user-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.user-card-name{font-weight:700;font-size:0.95rem}
+.user-card-id{font-family:'Space Grotesk',monospace;font-size:0.72rem;color:var(--muted);margin-top:2px}
+.user-card-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.user-stat{background:rgba(255,255,255,0.04);border-radius:10px;padding:8px;text-align:center}
+.user-stat-label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.user-stat-val{font-family:'Space Grotesk',monospace;font-size:1rem;font-weight:700;color:var(--text)}
+.user-stat-val.gold{color:var(--gold)}
+.user-card-edit{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.user-card-edit.open{display:block}
+.mobile-edit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.mobile-edit-field{display:flex;flex-direction:column;gap:4px}
+.mobile-edit-field label{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.mobile-edit-field input{background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:'Space Grotesk',monospace;font-size:0.85rem;outline:none;text-align:center;width:100%;transition:border-color .2s}
+.mobile-edit-field input:focus{border-color:var(--accent)}
+
+/* ── log filter ── */
+.log-filter{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);text-decoration:none;transition:all .2s}
+.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(124,92,255,.1)}
+
+/* ── admin list ── */
+.admin-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.admin-row:last-child{border-bottom:none}
+.admin-info{display:flex;flex-direction:column;gap:2px}
+.admin-id{font-family:'Space Grotesk',monospace;font-size:0.8rem;color:var(--muted)}
+
+/* ── section title ── */
+.section-title{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:12px;margin-top:28px}
+.section-title:first-child{margin-top:0}
+
+/* ── login ── */
 .login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;position:relative;z-index:1}
 .login-card{width:100%;max-width:380px}
 .login-card .logo{text-align:center;margin-bottom:32px}
@@ -151,25 +197,28 @@ input:checked+.slider::before{transform:translateX(20px)}
 .login-card .logo p{color:var(--muted);font-size:0.85rem;margin-top:4px}
 .error-msg{background:rgba(255,92,124,.12);border:1px solid rgba(255,92,124,.3);color:var(--danger);padding:10px 14px;border-radius:10px;margin-bottom:16px;font-size:0.85rem}
 
-/* section title */
-.section-title{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:12px;margin-top:28px}
-.section-title:first-child{margin-top:0}
-
-/* admin list */
-.admin-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
-.admin-row:last-child{border-bottom:none}
-.admin-info{display:flex;flex-direction:column;gap:2px}
-.admin-id{font-family:'Space Grotesk',monospace;font-size:0.8rem;color:var(--muted)}
-
-/* log filter */
-.log-filter{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.filter-btn{padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);text-decoration:none;transition:all .2s}
-.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(124,92,255,.1)}
-
-/* responsive */
+/* ── responsive ── */
 @media(max-width:768px){
-  .sidebar{display:none}
+  .mobile-header{display:flex}
+  .layout{padding-top:56px}
+  .sidebar{
+    position:fixed;top:56px;left:0;height:calc(100vh - 56px);
+    transform:translateX(-100%);z-index:100;
+    width:var(--sidebar-w);
+  }
+  .sidebar.open{transform:translateX(0)}
   .main{padding:16px}
+  .page-title{font-size:1.2rem}
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat-value{font-size:1.8rem}
+  /* 테이블 숨기고 카드 보임 */
+  .table-wrap.users-table{display:none}
+  .user-cards{display:flex}
+  .rewards-grid{grid-template-columns:repeat(5,1fr);gap:6px}
+  .reward-item input{padding:6px 2px;font-size:0.8rem}
+  .card{padding:16px;border-radius:16px}
+}
+@media(max-width:480px){
   .stats-grid{grid-template-columns:repeat(2,1fr)}
   .rewards-grid{grid-template-columns:repeat(5,1fr)}
 }
@@ -191,39 +240,46 @@ input:checked+.slider::before{transform:translateX(20px)}
         <label>비밀번호</label>
         <input type="password" name="password" placeholder="비밀번호 입력" autofocus autocomplete="current-password">
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">
-        로그인 →
-      </button>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">로그인 →</button>
     </form>
   </div>
 </div>
 
 {% else %}
-<div class="layout">
 
-  <!-- sidebar -->
-  <aside class="sidebar">
+<!-- mobile top bar -->
+<header class="mobile-header">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="메뉴">☰</button>
+  <span class="gem">💎</span>
+  <span class="title">포인트봇</span>
+</header>
+
+<!-- overlay -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <span class="gem">💎</span>
       <span>포인트봇</span>
     </div>
     <nav>
-      <a href="/" class="nav-item {% if page=='dashboard' %}active{% endif %}">
+      <a href="/" class="nav-item {% if page=='dashboard' %}active{% endif %}" onclick="closeSidebar()">
         <span class="icon">📊</span> 대시보드
       </a>
-      <a href="/users" class="nav-item {% if page=='users' %}active{% endif %}">
+      <a href="/users" class="nav-item {% if page=='users' %}active{% endif %}" onclick="closeSidebar()">
         <span class="icon">👥</span> 유저 관리
       </a>
-      <a href="/settle" class="nav-item {% if page=='settle' %}active{% endif %}">
+      <a href="/settle" class="nav-item {% if page=='settle' %}active{% endif %}" onclick="closeSidebar()">
         <span class="icon">🏅</span> 차등 포인트
       </a>
-      <a href="/surprise" class="nav-item {% if page=='surprise' %}active{% endif %}">
+      <a href="/surprise" class="nav-item {% if page=='surprise' %}active{% endif %}" onclick="closeSidebar()">
         <span class="icon">🎁</span> 돌발 설정
       </a>
-      <a href="/admins" class="nav-item {% if page=='admins' %}active{% endif %}">
+      <a href="/admins" class="nav-item {% if page=='admins' %}active{% endif %}" onclick="closeSidebar()">
         <span class="icon">🛡</span> 관리자
       </a>
-      <a href="/logs" class="nav-item {% if page=='logs' %}active{% endif %}">
+      <a href="/logs" class="nav-item {% if page=='logs' %}active{% endif %}" onclick="closeSidebar()">
         <span class="icon">📜</span> 로그
       </a>
     </nav>
@@ -232,7 +288,6 @@ input:checked+.slider::before{transform:translateX(20px)}
     </div>
   </aside>
 
-  <!-- main -->
   <main class="main">
 
     {% if page == "dashboard" %}
@@ -255,23 +310,18 @@ input:checked+.slider::before{transform:translateX(20px)}
         <div class="stat-value">{{ "{:,}".format(stats.surprise_count) }}</div>
       </div>
     </div>
-
     <div class="section-title">최근 포인트 변동</div>
     <div class="table-wrap">
       <table>
-        <thead><tr>
-          <th>유저</th><th>변동</th><th>사유</th><th>메모</th><th>시각</th>
-        </tr></thead>
+        <thead><tr><th>유저</th><th>변동</th><th>사유</th><th>메모</th><th>시각</th></tr></thead>
         <tbody>
           {% for l in logs %}
           <tr>
             <td>{% if l.username %}<b>@{{ l.username }}</b>{% else %}<span class="mono">{{ l.user_id }}</span>{% endif %}</td>
-            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">
-              {% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} P
-            </td>
+            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">{% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} P</td>
             <td><span class="badge badge-{{ l.reason }}">{{ l.reason }}</span></td>
             <td style="color:var(--muted)">{{ l.memo or '—' }}</td>
-            <td style="color:var(--muted);font-size:0.8rem">{{ l.created_at[:16] if l.created_at else '—' }}</td>
+            <td style="color:var(--muted);font-size:0.78rem">{{ l.created_at[:16] if l.created_at else '—' }}</td>
           </tr>
           {% else %}
           <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">기록 없음</td></tr>
@@ -286,25 +336,49 @@ input:checked+.slider::before{transform:translateX(20px)}
       <input type="text" name="q" value="{{ q }}" placeholder="@username 또는 user_id 검색…">
       <button type="submit" class="btn btn-ghost">검색</button>
     </form>
-    <div class="table-wrap">
+
+    <!-- 데스크탑 테이블 -->
+    <div class="table-wrap users-table">
       <table>
         <thead><tr>
-          <th>유저</th><th>당일 채팅</th><th>누적 채팅</th><th>포인트</th><th>수정</th>
+          <th>유저</th><th>당일 채팅</th><th>누적 채팅</th><th>포인트</th><th></th>
         </tr></thead>
         <tbody>
           {% for u in users %}
-          <tr>
+          <tr id="row-{{ u.user_id }}">
             <td>
               {% if u.username %}<b>@{{ u.username }}</b><br>{% endif %}
-              <span class="mono" style="font-size:0.78rem;color:var(--muted)">{{ u.user_id }}</span>
+              <span class="mono" style="font-size:0.75rem;color:var(--muted)">{{ u.user_id }}</span>
             </td>
             <td class="mono">{{ "{:,}".format(u.daily_chat) }}</td>
             <td class="mono">{{ "{:,}".format(u.total_chat) }}</td>
             <td class="mono" style="color:var(--gold)">{{ "{:,}".format(u.points) }} P</td>
             <td>
-              <form method="post" action="/users/{{ u.user_id }}/points" class="edit-form">
-                <input type="number" name="points" value="{{ u.points }}" min="0">
-                <button type="submit" class="btn btn-ghost btn-sm">저장</button>
+              <button type="button" class="btn btn-ghost btn-sm btn-icon"
+                onclick="toggleEdit('{{ u.user_id }}')">✏️</button>
+            </td>
+          </tr>
+          <tr class="edit-row" id="edit-{{ u.user_id }}">
+            <td colspan="5">
+              <form method="post" action="/users/{{ u.user_id }}/edit">
+                <div class="edit-fields">
+                  <div class="edit-field">
+                    <label>당일 채팅</label>
+                    <input type="number" name="daily_chat" value="{{ u.daily_chat }}" min="0">
+                  </div>
+                  <div class="edit-field">
+                    <label>누적 채팅</label>
+                    <input type="number" name="total_chat" value="{{ u.total_chat }}" min="0">
+                  </div>
+                  <div class="edit-field">
+                    <label>포인트</label>
+                    <input type="number" name="points" value="{{ u.points }}" min="0">
+                  </div>
+                  <div class="edit-actions">
+                    <button type="submit" class="btn btn-primary btn-sm">저장</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEdit('{{ u.user_id }}')">취소</button>
+                  </div>
+                </div>
               </form>
             </td>
           </tr>
@@ -313,6 +387,60 @@ input:checked+.slider::before{transform:translateX(20px)}
           {% endfor %}
         </tbody>
       </table>
+    </div>
+
+    <!-- 모바일 카드 -->
+    <div class="user-cards">
+      {% for u in users %}
+      <div class="user-card">
+        <div class="user-card-header">
+          <div>
+            <div class="user-card-name">{% if u.username %}@{{ u.username }}{% else %}알 수 없음{% endif %}</div>
+            <div class="user-card-id">{{ u.user_id }}</div>
+          </div>
+          <button type="button" class="btn btn-ghost btn-sm btn-icon"
+            onclick="toggleMobileEdit('m{{ u.user_id }}')">✏️</button>
+        </div>
+        <div class="user-card-stats">
+          <div class="user-stat">
+            <div class="user-stat-label">당일</div>
+            <div class="user-stat-val">{{ "{:,}".format(u.daily_chat) }}</div>
+          </div>
+          <div class="user-stat">
+            <div class="user-stat-label">누적</div>
+            <div class="user-stat-val">{{ "{:,}".format(u.total_chat) }}</div>
+          </div>
+          <div class="user-stat">
+            <div class="user-stat-label">포인트</div>
+            <div class="user-stat-val gold">{{ "{:,}".format(u.points) }}</div>
+          </div>
+        </div>
+        <div class="user-card-edit" id="m{{ u.user_id }}">
+          <form method="post" action="/users/{{ u.user_id }}/edit">
+            <div class="mobile-edit-grid">
+              <div class="mobile-edit-field">
+                <label>당일 채팅</label>
+                <input type="number" name="daily_chat" value="{{ u.daily_chat }}" min="0">
+              </div>
+              <div class="mobile-edit-field">
+                <label>누적 채팅</label>
+                <input type="number" name="total_chat" value="{{ u.total_chat }}" min="0">
+              </div>
+              <div class="mobile-edit-field">
+                <label>포인트</label>
+                <input type="number" name="points" value="{{ u.points }}" min="0">
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button type="submit" class="btn btn-primary btn-sm" style="flex:1;justify-content:center">저장</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="toggleMobileEdit('m{{ u.user_id }}')">취소</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <p style="color:var(--muted);text-align:center;padding:32px 0">유저 없음</p>
+      {% endfor %}
     </div>
 
     {% elif page == "settle" %}
@@ -326,7 +454,6 @@ input:checked+.slider::before{transform:translateX(20px)}
           </label>
           <label>자정 정산 활성화</label>
         </div>
-
         <div class="section-title">등수별 지급 포인트</div>
         <div class="rewards-grid">
           {% for i in range(10) %}
@@ -351,7 +478,6 @@ input:checked+.slider::before{transform:translateX(20px)}
           </label>
           <label>돌발 포인트 활성화</label>
         </div>
-
         <div class="form-group">
           <label>지급 포인트</label>
           <input type="number" name="surprise_points" value="{{ cfg.surprise_points }}" min="1">
@@ -405,24 +531,20 @@ input:checked+.slider::before{transform:translateX(20px)}
       <a href="/logs" class="filter-btn {% if not reason %}active{% endif %}">전체</a>
       <a href="/logs?reason=settle" class="filter-btn {% if reason=='settle' %}active{% endif %}">🏅 정산</a>
       <a href="/logs?reason=surprise" class="filter-btn {% if reason=='surprise' %}active{% endif %}">🎁 돌발</a>
-      <a href="/logs?reason=admin_edit" class="filter-btn {% if reason=='admin_edit' %}active{% endif %}">✏️ 관리자 수정</a>
+      <a href="/logs?reason=admin_edit" class="filter-btn {% if reason=='admin_edit' %}active{% endif %}">✏️ 수정</a>
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr>
-          <th>#</th><th>유저</th><th>변동</th><th>사유</th><th>메모</th><th>시각</th>
-        </tr></thead>
+        <thead><tr><th>#</th><th>유저</th><th>변동</th><th>사유</th><th>메모</th><th>시각</th></tr></thead>
         <tbody>
           {% for l in logs %}
           <tr>
             <td class="mono" style="color:var(--muted)">{{ l.id }}</td>
             <td>{% if l.username %}<b>@{{ l.username }}</b>{% else %}<span class="mono">{{ l.user_id }}</span>{% endif %}</td>
-            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">
-              {% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} P
-            </td>
+            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">{% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} P</td>
             <td><span class="badge badge-{{ l.reason }}">{{ l.reason }}</span></td>
             <td style="color:var(--muted)">{{ l.memo or '—' }}</td>
-            <td style="color:var(--muted);font-size:0.8rem">{{ l.created_at[:16] if l.created_at else '—' }}</td>
+            <td style="color:var(--muted);font-size:0.78rem">{{ l.created_at[:16] if l.created_at else '—' }}</td>
           </tr>
           {% else %}
           <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">로그 없음</td></tr>
@@ -434,7 +556,26 @@ input:checked+.slider::before{transform:translateX(20px)}
 
   </main>
 </div>
-{% endif %}
 
+<script>
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+function toggleEdit(uid){
+  const row = document.getElementById('edit-' + uid);
+  row.classList.toggle('open');
+}
+function toggleMobileEdit(id){
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+</script>
+
+{% endif %}
 </body>
 </html>
