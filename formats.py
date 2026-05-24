@@ -1,0 +1,71 @@
+def fmt_num(n: int) -> str:
+    return f"{n:,}"
+
+
+def my_info(username: str | None, daily: int, total: int, points: int) -> str:
+    name = f"@{username}" if username else "알 수 없음"
+    return (
+        f"<blockquote>👤 <b>내 정보</b></blockquote>\n\n"
+        f"🏷 <b>{name}</b>\n\n"
+        f"💬 <i>오늘 채팅</i>      <b>{fmt_num(daily)}</b>\n"
+        f"📈 <i>누적 채팅</i>      <b>{fmt_num(total)}</b>\n"
+        f"💎 <i>보유 포인트</i>   <b><u>{fmt_num(points)} P</u></b>"
+    )
+
+
+def rank_select() -> str:
+    return (
+        "<blockquote>🏆 <b>랭킹</b></blockquote>\n"
+        "<i>보고 싶은 랭킹을 골라줘 👇</i>"
+    )
+
+
+MEDALS = {1: "🥇", 2: "🥈", 3: "🥉"}
+
+
+def rank_page(title: str, rows: list, page: int, total_pages: int, value_key: str = "chat_count") -> str:
+    offset = page * 10
+    lines = [f"<blockquote>{title}  <i>· {offset+1}~{offset+len(rows)}위</i></blockquote>\n"]
+    for i, row in enumerate(rows):
+        rank = offset + i + 1
+        name = f"@{row['username']}" if row["username"] else str(row["user_id"])
+        val = fmt_num(row[value_key])
+        medal = MEDALS.get(rank)
+        if medal:
+            lines.append(f"{medal} <b>{name}</b>  —  <b>{val}</b>")
+        else:
+            lines.append(f"<b>{rank}.</b> {name}  —  {val}")
+    if title.startswith("📅"):
+        lines.append("\n<i>🕛 자정에 1위부터 포인트 차등 지급</i>")
+    return "\n".join(lines)
+
+
+def surprise_appear(points: int) -> str:
+    return (
+        f"<blockquote>🎁 <b>돌발 포인트!</b></blockquote>\n"
+        f"⚡️ <i>가장 빨리 누르는 사람이 가져가요</i>\n"
+        f"💎 <b>+{fmt_num(points)} P</b>"
+    )
+
+
+def surprise_winner(username: str | None, points: int) -> str:
+    name = f"@{username}" if username else "누군가"
+    return (
+        f"<blockquote>🎉 <b>당첨!</b></blockquote>\n"
+        f"🏷 <b>{name}</b> 님이\n"
+        f"💎 <b><u>+{fmt_num(points)} P</u></b> 획득 ⚡️"
+    )
+
+
+def lottery_result(n: int, winner_username: str | None) -> str:
+    name = f"@{winner_username}" if winner_username else "알 수 없음"
+    return (
+        f"<blockquote>🎲 <b>추첨 결과</b></blockquote>\n"
+        f"<i>당일 채팅 1~{n}위 중에서…</i>\n\n"
+        f"🎯 당첨자 → <b>{name}</b> 🎉\n"
+        f"<tg-spoiler>두구두구… 축하해요!</tg-spoiler>"
+    )
+
+
+def no_permission() -> str:
+    return "❌ <i>관리자만 쓸 수 있어요</i>"

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>💎 포인트봇 패널</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0f;
+  --surface:rgba(255,255,255,0.04);
+  --surface-hover:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.08);
+  --border-glow:rgba(124,92,255,0.5);
+  --text:#f5f5f7;
+  --muted:#8b8b94;
+  --accent:#7c5cff;
+  --accent2:#5cc8ff;
+  --gold:#ffd479;
+  --danger:#ff5c7c;
+  --success:#4cffb0;
+  --gradient:linear-gradient(135deg,#7c5cff,#5cc8ff);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Pretendard',-apple-system,sans-serif;font-size:15px;line-height:1.6}
+
+/* blobs */
+body::before,body::after{content:'';position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0}
+body::before{width:500px;height:500px;background:rgba(124,92,255,0.15);top:-100px;left:-100px}
+body::after{width:400px;height:400px;background:rgba(92,200,255,0.12);bottom:-80px;right:-80px}
+
+/* layout */
+.layout{display:flex;min-height:100vh;position:relative;z-index:1}
+
+/* sidebar */
+.sidebar{
+  width:220px;flex-shrink:0;
+  background:rgba(255,255,255,0.03);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  padding:24px 16px;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sidebar-logo{
+  display:flex;align-items:center;gap:10px;
+  padding:0 8px 24px;border-bottom:1px solid var(--border);margin-bottom:24px;
+}
+.sidebar-logo .gem{font-size:1.6rem}
+.sidebar-logo span{font-size:1rem;font-weight:700;background:var(--gradient);-webkit-background-clip:text;color:transparent}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:12px;
+  color:var(--muted);text-decoration:none;font-size:0.9rem;font-weight:500;
+  transition:all .2s;margin-bottom:2px;
+}
+.nav-item:hover{background:var(--surface-hover);color:var(--text)}
+.nav-item.active{background:rgba(124,92,255,0.15);color:var(--accent);border:1px solid rgba(124,92,255,0.2)}
+.nav-item .icon{font-size:1.1rem;width:22px;text-align:center}
+.sidebar-footer{margin-top:auto;padding-top:16px;border-top:1px solid var(--border)}
+.sidebar-footer a{display:block;padding:8px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:0.85rem;transition:all .2s}
+.sidebar-footer a:hover{color:var(--danger);background:rgba(255,92,124,0.08)}
+
+/* main */
+.main{flex:1;padding:32px;overflow-y:auto;min-width:0}
+.page-title{font-size:1.5rem;font-weight:700;margin-bottom:24px;display:flex;align-items:center;gap:10px}
+
+/* card */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;backdrop-filter:blur(20px);
+  box-shadow:0 8px 40px rgba(0,0,0,.4);
+  padding:24px;transition:transform .2s,border-color .2s,box-shadow .2s;
+}
+.card:hover{transform:translateY(-2px);border-color:var(--border-glow);box-shadow:0 12px 48px rgba(124,92,255,.15)}
+
+/* stat grid */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;transition:all .2s}
+.stat-card:hover{transform:translateY(-2px);border-color:var(--border-glow);box-shadow:0 8px 32px rgba(124,92,255,.12)}
+.stat-label{font-size:0.8rem;color:var(--muted);margin-bottom:8px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.stat-value{font-family:'Space Grotesk',monospace;font-size:2.2rem;font-weight:700;background:var(--gradient);-webkit-background-clip:text;color:transparent;line-height:1.1}
+.stat-value.gold{background:linear-gradient(135deg,#ffd479,#ffaa00);-webkit-background-clip:text;color:transparent}
+
+/* table */
+.table-wrap{overflow-x:auto;border-radius:16px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse}
+thead th{padding:12px 16px;text-align:left;font-size:0.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02)}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:var(--surface-hover)}
+tbody td{padding:12px 16px;font-size:0.88rem;border-bottom:1px solid rgba(255,255,255,0.04)}
+tbody tr:last-child td{border-bottom:none}
+.mono{font-family:'Space Grotesk',monospace;font-size:0.92rem}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:600}
+.badge-settle{background:rgba(124,92,255,.2);color:#b8a4ff}
+.badge-surprise{background:rgba(92,200,255,.2);color:#8de8ff}
+.badge-admin_edit{background:rgba(255,212,121,.15);color:var(--gold)}
+.pos{color:var(--success)}.neg{color:var(--danger)}
+
+/* form */
+.form-group{margin-bottom:18px}
+label{display:block;font-size:0.82rem;color:var(--muted);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+input[type=text],input[type=number],input[type=password]{
+  width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);
+  border-radius:10px;padding:10px 14px;color:var(--text);font-size:0.9rem;
+  font-family:'Pretendard',sans-serif;outline:none;transition:border-color .2s;
+}
+input:focus{border-color:var(--accent)}
+input::placeholder{color:var(--muted)}
+
+/* btn */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;font-size:0.88rem;font-weight:600;cursor:pointer;border:none;transition:all .2s;font-family:inherit}
+.btn-primary{background:var(--gradient);color:#fff;box-shadow:0 4px 20px rgba(124,92,255,.3)}
+.btn-primary:hover{box-shadow:0 6px 28px rgba(124,92,255,.5);transform:translateY(-1px)}
+.btn-ghost{background:var(--surface);border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{background:var(--surface-hover);border-color:var(--accent)}
+.btn-danger{background:rgba(255,92,124,.15);border:1px solid rgba(255,92,124,.3);color:var(--danger)}
+.btn-danger:hover{background:rgba(255,92,124,.25)}
+.btn-sm{padding:6px 12px;font-size:0.8rem;border-radius:8px}
+
+/* toggle */
+.toggle-wrap{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.toggle-wrap label{margin:0;font-size:0.9rem;color:var(--text);text-transform:none;letter-spacing:0}
+.toggle{position:relative;display:inline-block;width:46px;height:26px}
+.toggle input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:13px;cursor:pointer;transition:.3s;border:1px solid var(--border)}
+.slider::before{content:'';position:absolute;width:18px;height:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+input:checked+.slider{background:var(--accent);border-color:var(--accent)}
+input:checked+.slider::before{transform:translateX(20px)}
+
+/* rewards grid */
+.rewards-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px}
+.reward-item{text-align:center}
+.reward-item label{margin-bottom:6px;font-size:0.75rem;color:var(--gold)}
+.reward-item input{text-align:center;font-family:'Space Grotesk',monospace}
+
+/* search */
+.search-bar{display:flex;gap:10px;margin-bottom:20px}
+.search-bar input{flex:1}
+
+/* inline edit */
+.edit-form{display:flex;gap:6px;align-items:center}
+.edit-form input{width:90px;padding:6px 10px}
+
+/* login */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;position:relative;z-index:1}
+.login-card{width:100%;max-width:380px}
+.login-card .logo{text-align:center;margin-bottom:32px}
+.login-card .logo .gem{font-size:3rem;display:block;margin-bottom:8px}
+.login-card .logo h1{font-size:1.4rem;font-weight:700;background:var(--gradient);-webkit-background-clip:text;color:transparent}
+.login-card .logo p{color:var(--muted);font-size:0.85rem;margin-top:4px}
+.error-msg{background:rgba(255,92,124,.12);border:1px solid rgba(255,92,124,.3);color:var(--danger);padding:10px 14px;border-radius:10px;margin-bottom:16px;font-size:0.85rem}
+
+/* section title */
+.section-title{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:12px;margin-top:28px}
+.section-title:first-child{margin-top:0}
+
+/* admin list */
+.admin-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.admin-row:last-child{border-bottom:none}
+.admin-info{display:flex;flex-direction:column;gap:2px}
+.admin-id{font-family:'Space Grotesk',monospace;font-size:0.8rem;color:var(--muted)}
+
+/* log filter */
+.log-filter{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);text-decoration:none;transition:all .2s}
+.filter-btn:hover,.filter-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(124,92,255,.1)}
+
+/* responsive */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .main{padding:16px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .rewards-grid{grid-template-columns:repeat(5,1fr)}
+}
+</style>
+</head>
+<body>
+
+{% if page == "login" %}
+<div class="login-wrap">
+  <div class="login-card card">
+    <div class="logo">
+      <span class="gem">💎</span>
+      <h1>포인트봇 패널</h1>
+      <p>관리자 전용 패널</p>
+    </div>
+    {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+    <form method="post" action="/login">
+      <div class="form-group">
+        <label>비밀번호</label>
+        <input type="password" name="password" placeholder="비밀번호 입력" autofocus autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">
+        로그인 →
+      </button>
+    </form>
+  </div>
+</div>
+
+{% else %}
+<div class="layout">
+
+  <!-- sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="gem">💎</span>
+      <span>포인트봇</span>
+    </div>
+    <nav>
+      <a href="/" class="nav-item {% if page=='dashboard' %}active{% endif %}">
+        <span class="icon">📊</span> 대시보드
+      </a>
+      <a href="/users" class="nav-item {% if page=='users' %}active{% endif %}">
+        <span class="icon">👥</span> 유저 관리
+      </a>
+      <a href="/settle" class="nav-item {% if page=='settle' %}active{% endif %}">
+        <span class="icon">🏅</span> 차등 포인트
+      </a>
+      <a href="/surprise" class="nav-item {% if page=='surprise' %}active{% endif %}">
+        <span class="icon">🎁</span> 돌발 설정
+      </a>
+      <a href="/admins" class="nav-item {% if page=='admins' %}active{% endif %}">
+        <span class="icon">🛡</span> 관리자
+      </a>
+      <a href="/logs" class="nav-item {% if page=='logs' %}active{% endif %}">
+        <span class="icon">📜</span> 로그
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="/logout">🚪 로그아웃</a>
+    </div>
+  </aside>
+
+  <!-- main -->
+  <main class="main">
+
+    {% if page == "dashboard" %}
+    <div class="page-title">📊 대시보드</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">총 유저</div>
+        <div class="stat-value">{{ "{:,}".format(stats.total_users) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">총 포인트</div>
+        <div class="stat-value gold">{{ "{:,}".format(stats.total_points) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">오늘 채팅 유저</div>
+        <div class="stat-value">{{ "{:,}".format(stats.today_chatters) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">오늘 돌발 발생</div>
+        <div class="stat-value">{{ "{:,}".format(stats.surprise_count) }}</div>
+      </div>
+    </div>
+
+    <div class="section-title">최근 포인트 변동</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>유저</th><th>변동</th><th>사유</th><th>메모</th><th>시각</th>
+        </tr></thead>
+        <tbody>
+          {% for l in logs %}
+          <tr>
+            <td>{% if l.username %}<b>@{{ l.username }}</b>{% else %}<span class="mono">{{ l.user_id }}</span>{% endif %}</td>
+            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">
+              {% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} P
+            </td>
+            <td><span class="badge badge-{{ l.reason }}">{{ l.reason }}</span></td>
+            <td style="color:var(--muted)">{{ l.memo or '—' }}</td>
+            <td style="color:var(--muted);font-size:0.8rem">{{ l.created_at[:16] if l.created_at else '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">기록 없음</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% elif page == "users" %}
+    <div class="page-title">👥 유저 관리</div>
+    <form method="get" action="/users" class="search-bar">
+      <input type="text" name="q" value="{{ q }}" placeholder="@username 또는 user_id 검색…">
+      <button type="submit" class="btn btn-ghost">검색</button>
+    </form>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>유저</th><th>당일 채팅</th><th>누적 채팅</th><th>포인트</th><th>수정</th>
+        </tr></thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>
+              {% if u.username %}<b>@{{ u.username }}</b><br>{% endif %}
+              <span class="mono" style="font-size:0.78rem;color:var(--muted)">{{ u.user_id }}</span>
+            </td>
+            <td class="mono">{{ "{:,}".format(u.daily_chat) }}</td>
+            <td class="mono">{{ "{:,}".format(u.total_chat) }}</td>
+            <td class="mono" style="color:var(--gold)">{{ "{:,}".format(u.points) }} P</td>
+            <td>
+              <form method="post" action="/users/{{ u.user_id }}/points" class="edit-form">
+                <input type="number" name="points" value="{{ u.points }}" min="0">
+                <button type="submit" class="btn btn-ghost btn-sm">저장</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">유저 없음</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% elif page == "settle" %}
+    <div class="page-title">🏅 차등 포인트 설정</div>
+    <div class="card">
+      <form method="post" action="/settle">
+        <div class="toggle-wrap">
+          <label class="toggle">
+            <input type="checkbox" name="settle_enabled" {% if cfg.settle_enabled %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+          <label>자정 정산 활성화</label>
+        </div>
+
+        <div class="section-title">등수별 지급 포인트</div>
+        <div class="rewards-grid">
+          {% for i in range(10) %}
+          <div class="reward-item">
+            <label>{{ i+1 }}등</label>
+            <input type="number" name="r{{ i+1 }}" value="{{ cfg.settle_rewards[i] if i < cfg.settle_rewards|length else 0 }}" min="0">
+          </div>
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary">💾 저장</button>
+      </form>
+    </div>
+
+    {% elif page == "surprise" %}
+    <div class="page-title">🎁 돌발 포인트 설정</div>
+    <div class="card">
+      <form method="post" action="/surprise">
+        <div class="toggle-wrap">
+          <label class="toggle">
+            <input type="checkbox" name="surprise_enabled" {% if cfg.surprise_enabled %}checked{% endif %}>
+            <span class="slider"></span>
+          </label>
+          <label>돌발 포인트 활성화</label>
+        </div>
+
+        <div class="form-group">
+          <label>지급 포인트</label>
+          <input type="number" name="surprise_points" value="{{ cfg.surprise_points }}" min="1">
+        </div>
+        <div class="form-group">
+          <label>발생 확률 (%)</label>
+          <input type="number" name="surprise_chance" value="{{ (cfg.surprise_chance * 100)|round(4) }}" min="0" max="100" step="0.001">
+        </div>
+        <div class="form-group">
+          <label>만료 시간 (초)</label>
+          <input type="number" name="surprise_expire_sec" value="{{ cfg.surprise_expire_sec }}" min="1">
+        </div>
+        <button type="submit" class="btn btn-primary">💾 저장</button>
+      </form>
+    </div>
+
+    {% elif page == "admins" %}
+    <div class="page-title">🛡 관리자 관리</div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="section-title" style="margin-top:0">관리자 추가</div>
+      <form method="post" action="/admins/add" style="display:flex;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:140px">
+          <input type="number" name="user_id" placeholder="Telegram user_id" required>
+        </div>
+        <div style="flex:1;min-width:140px">
+          <input type="text" name="username" placeholder="@username (선택)">
+        </div>
+        <button type="submit" class="btn btn-primary">추가</button>
+      </form>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0">관리자 목록</div>
+      {% for a in admins %}
+      <div class="admin-row">
+        <div class="admin-info">
+          <span>{% if a.username %}<b>@{{ a.username }}</b>{% else %}이름 없음{% endif %}</span>
+          <span class="admin-id">{{ a.user_id }}</span>
+        </div>
+        <form method="post" action="/admins/{{ a.user_id }}/delete">
+          <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+        </form>
+      </div>
+      {% else %}
+      <p style="color:var(--muted);text-align:center;padding:20px 0">관리자 없음</p>
+      {% endfor %}
+    </div>
+
+    {% elif page == "logs" %}
+    <div class="page-title">📜 포인트 로그</div>
+    <div class="log-filter">
+      <a href="/logs" class="filter-btn {% if not reason %}active{% endif %}">전체</a>
+      <a href="/logs?reason=settle" class="filter-btn {% if reason=='settle' %}active{% endif %}">🏅 정산</a>
+      <a href="/logs?reason=surprise" class="filter-btn {% if reason=='surprise' %}active{% endif %}">🎁 돌발</a>
+      <a href="/logs?reason=admin_edit" class="filter-btn {% if reason=='admin_edit' %}active{% endif %}">✏️ 관리자 수정</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>유저</th><th>변동</th><th>사유</th><th>메모</th><th>시각</th>
+        </tr></thead>
+        <tbody>
+          {% for l in logs %}
+          <tr>
+            <td class="mono" style="color:var(--muted)">{{ l.id }}</td>
+            <td>{% if l.username %}<b>@{{ l.username }}</b>{% else %}<span class="mono">{{ l.user_id }}</span>{% endif %}</td>
+            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">
+              {% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} P
+            </td>
+            <td><span class="badge badge-{{ l.reason }}">{{ l.reason }}</span></td>
+            <td style="color:var(--muted)">{{ l.memo or '—' }}</td>
+            <td style="color:var(--muted);font-size:0.8rem">{{ l.created_at[:16] if l.created_at else '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">로그 없음</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+  </main>
+</div>
+{% endif %}
+
+</body>
+</html>
