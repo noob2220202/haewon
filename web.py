@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request, Form, Response, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from itsdangerous import URLSafeTimedSerializer, BadSignature
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from dotenv import load_dotenv
 
 import db
@@ -39,7 +39,7 @@ def check_session(request: Request) -> bool:
     try:
         _signer.loads(token, max_age=SESSION_MAX_AGE)
         return True
-    except BadSignature:
+    except (BadSignature, SignatureExpired):
         return False
 
 
@@ -61,7 +61,7 @@ async def login_page(request: Request):
 async def login_post(request: Request, password: str = Form(...)):
     if password == WEB_PASSWORD:
         resp = RedirectResponse("/", status_code=303)
-        resp.set_cookie(COOKIE_NAME, make_session(), max_age=SESSION_MAX_AGE, httponly=True)
+        resp.set_cookie(COOKIE_NAME, make_session(), max_age=SESSION_MAX_AGE, httponly=True, path="/", samesite="lax")
         return resp
     return templates.TemplateResponse("panel.html", {"request": request, "page": "login", "error": "비밀번호가 틀렸어요"})
 
