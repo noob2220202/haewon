@@ -42,9 +42,8 @@ def rank_page(title: str, rows: list, page: int, total_pages: int, value_key: st
 
 def surprise_appear(points: int) -> str:
     return (
-        f"<blockquote>🎁 <b>돌발 당근!</b></blockquote>\n"
-        f"⚡️ <i>가장 빨리 누르는 사람이 가져가요</i>\n"
-        f"🥕 <b>+{fmt_num(points)} 🥕</b>"
+        f"⚡️돌발 포인트!\n"
+        f"🥕 +{fmt_num(points)}"
     )
 
 
