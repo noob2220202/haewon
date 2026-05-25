@@ -5,11 +5,11 @@ def fmt_num(n: int) -> str:
 def my_info(username: str | None, daily: int, total: int, points: int) -> str:
     name = f"@{username}" if username else "알 수 없음"
     return (
-        f"<blockquote>👤 <b>내 정보</b></blockquote>\n\n"
-        f"🏷 <b>{name}</b>\n\n"
-        f"💬 <i>오늘 채팅</i>      <b>{fmt_num(daily)}</b>\n"
-        f"📈 <i>누적 채팅</i>      <b>{fmt_num(total)}</b>\n"
-        f"💎 <i>보유 포인트</i>   <b><u>{fmt_num(points)} P</u></b>"
+        f"<blockquote>👤 <b>내 정보</b></blockquote>\n"
+        f"🗣 <b>{name}</b>\n\n"
+        f"✉️ <i>오늘 채팅</i>      <b>{fmt_num(daily)}</b>\n"
+        f"📮 <i>누적 채팅</i>      <b>{fmt_num(total)}</b>\n\n"
+        f"🥕 <i>보유 포인트</i>   <b><u>{fmt_num(points)} P</u></b>"
     )
 
 

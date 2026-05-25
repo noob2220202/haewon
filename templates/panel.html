@@ -258,7 +258,7 @@ input:checked+.slider::before{transform:translateX(20px)}
 </header>
 
 <!-- overlay -->
-<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="overlay" id="overlay"></div>
 
 <div class="layout">
   <aside class="sidebar" id="sidebar">
@@ -267,22 +267,22 @@ input:checked+.slider::before{transform:translateX(20px)}
       <span>포인트봇</span>
     </div>
     <nav>
-      <a href="/" class="nav-item {% if page=='dashboard' %}active{% endif %}" onclick="closeSidebar()">
+      <a href="/" class="nav-item {% if page=='dashboard' %}active{% endif %}">
         <span class="icon">📊</span> 대시보드
       </a>
-      <a href="/users" class="nav-item {% if page=='users' %}active{% endif %}" onclick="closeSidebar()">
+      <a href="/users" class="nav-item {% if page=='users' %}active{% endif %}">
         <span class="icon">👥</span> 유저 관리
       </a>
-      <a href="/settle" class="nav-item {% if page=='settle' %}active{% endif %}" onclick="closeSidebar()">
+      <a href="/settle" class="nav-item {% if page=='settle' %}active{% endif %}">
         <span class="icon">🏅</span> 차등 포인트
       </a>
-      <a href="/surprise" class="nav-item {% if page=='surprise' %}active{% endif %}" onclick="closeSidebar()">
+      <a href="/surprise" class="nav-item {% if page=='surprise' %}active{% endif %}">
         <span class="icon">🎁</span> 돌발 설정
       </a>
-      <a href="/admins" class="nav-item {% if page=='admins' %}active{% endif %}" onclick="closeSidebar()">
+      <a href="/admins" class="nav-item {% if page=='admins' %}active{% endif %}">
         <span class="icon">🛡</span> 관리자
       </a>
-      <a href="/logs" class="nav-item {% if page=='logs' %}active{% endif %}" onclick="closeSidebar()">
+      <a href="/logs" class="nav-item {% if page=='logs' %}active{% endif %}">
         <span class="icon">📜</span> 로그
       </a>
     </nav>
