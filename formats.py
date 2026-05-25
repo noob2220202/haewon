@@ -69,3 +69,25 @@ def lottery_result(n: int, winner_username: str | None) -> str:
 
 def no_permission() -> str:
     return "❌ <i>관리자만 쓸 수 있어요</i>"
+
+
+def group_only() -> str:
+    return "❌ <i>그룹에서만 사용할 수 있어요</i>"
+
+
+def checkin_success(username: str | None, points: int) -> str:
+    name = f"@{username}" if username else "누군가"
+    return (
+        f"<blockquote>✅ <b>출석 완료!</b></blockquote>\n"
+        f"🏷 <b>{name}</b>\n"
+        f"💎 <b><u>+{fmt_num(points)} P</u></b> 지급됐어요 🎉"
+    )
+
+
+def checkin_already(username: str | None) -> str:
+    name = f"@{username}" if username else "누군가"
+    return (
+        f"<blockquote>⏰ <b>이미 출석했어요</b></blockquote>\n"
+        f"🏷 <b>{name}</b>\n"
+        f"<i>내일 다시 출석해줘요!</i>"
+    )

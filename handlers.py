@@ -44,6 +44,8 @@ def _cleanup_cooldown():
 async def on_message(message: Message, bot: Bot):
     if not message.from_user:
         return
+    if message.chat.type == "private":
+        return
 
     cfg = await get_cfg()
     text = message.text or ""
@@ -106,6 +108,11 @@ async def cmd_myinfo(message: Message, bot: Bot):
     uid = message.from_user.id
     await bot.delete_message(message.chat.id, message.message_id)
 
+    if message.chat.type == "private" and not await db.is_admin(uid):
+        sent = await message.answer(formats.group_only(), parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
     user = await db.get_user(uid)
     daily = await db.get_daily_count(uid)
     if user is None:
@@ -126,7 +133,15 @@ async def cmd_myinfo(message: Message, bot: Bot):
 
 @router.message(Command("랭크"))
 async def cmd_rank(message: Message, bot: Bot):
+    cfg = await get_cfg()
+    uid = message.from_user.id
     await bot.delete_message(message.chat.id, message.message_id)
+
+    if message.chat.type == "private" and not await db.is_admin(uid):
+        sent = await message.answer(formats.group_only(), parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
     kb = InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="📅 당일 랭킹", callback_data="rank_daily_0"),
         InlineKeyboardButton(text="🗂 누적 랭킹", callback_data="rank_total_0"),
@@ -245,3 +260,32 @@ async def cmd_lottery(message: Message, bot: Bot):
         formats.lottery_result(n, winner["username"]),
         parse_mode="HTML",
     )
+
+
+# ── /출석 ─────────────────────────────────────────────────────────────────────
+
+@router.message(Command("출석"))
+async def cmd_checkin(message: Message, bot: Bot):
+    cfg = await get_cfg()
+    uid = message.from_user.id
+    username = message.from_user.username
+    await bot.delete_message(message.chat.id, message.message_id)
+
+    if message.chat.type == "private" and not await db.is_admin(uid):
+        sent = await message.answer(formats.group_only(), parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    if not cfg["checkin_enabled"]:
+        sent = await message.answer("❌ <i>출석 체크가 비활성화되어 있어요</i>", parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    pts = cfg["checkin_points"]
+    success = await db.check_in(uid, username)
+    if success:
+        await db.add_points(uid, pts, "checkin", "출석 체크")
+        sent = await message.answer(formats.checkin_success(username, pts), parse_mode="HTML")
+    else:
+        sent = await message.answer(formats.checkin_already(username), parse_mode="HTML")
+    asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))

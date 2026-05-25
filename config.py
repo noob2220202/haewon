@@ -21,6 +21,8 @@ async def get_cfg() -> dict:
             "chat_min_len": int(raw.get("chat_min_len", "3")),
             "chat_cooldown_sec": int(raw.get("chat_cooldown_sec", "1")),
             "msg_autodelete_sec": int(raw.get("msg_autodelete_sec", "5")),
+            "checkin_enabled": raw.get("checkin_enabled", "true") == "true",
+            "checkin_points": int(raw.get("checkin_points", "30")),
         }
         _cache_ts = time.monotonic()
     return _cache

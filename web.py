@@ -133,7 +133,15 @@ async def settle_save(request: Request):
         val = form.get(f"r{i}", "0")
         rewards.append(int(val) if str(val).isdigit() else 0)
     enabled = form.get("settle_enabled") == "on"
-    await save_cfg({"settle_enabled": enabled, "settle_rewards": rewards})
+    checkin_enabled = form.get("checkin_enabled") == "on"
+    checkin_points_raw = form.get("checkin_points", "30")
+    checkin_points = int(checkin_points_raw) if str(checkin_points_raw).isdigit() else 30
+    await save_cfg({
+        "settle_enabled": enabled,
+        "settle_rewards": rewards,
+        "checkin_enabled": checkin_enabled,
+        "checkin_points": checkin_points,
+    })
     return RedirectResponse("/settle", status_code=303)
 
 

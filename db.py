@@ -39,6 +39,7 @@ async def init_db():
                 user_id    INTEGER,
                 ymd        TEXT,
                 chat_count INTEGER DEFAULT 0,
+                checked_in INTEGER DEFAULT 0,
                 PRIMARY KEY (user_id, ymd)
             );
             CREATE TABLE IF NOT EXISTS config (
@@ -59,6 +60,13 @@ async def init_db():
                 created_at TEXT
             );
         """)
+        # 기존 DB에 checked_in 컬럼이 없을 수 있으므로 마이그레이션
+        try:
+            await db.execute("ALTER TABLE daily ADD COLUMN checked_in INTEGER DEFAULT 0")
+            await db.commit()
+        except Exception:
+            pass  # 이미 존재하면 무시
+
         defaults = {
             "settle_enabled": "true",
             "settle_rewards": "[100,90,80,70,60,50,40,30,20,10]",
@@ -69,6 +77,8 @@ async def init_db():
             "chat_min_len": "3",
             "chat_cooldown_sec": "1",
             "msg_autodelete_sec": "5",
+            "checkin_enabled": "true",
+            "checkin_points": "30",
         }
         for k, v in defaults.items():
             await db.execute(
@@ -113,6 +123,30 @@ async def get_daily_count(user_id: int, ymd: str | None = None) -> int:
         )
         row = await cur.fetchone()
         return row["chat_count"] if row else 0
+
+
+async def check_in(user_id: int, username: str | None) -> bool:
+    """출석 시도. 이미 했으면 False, 성공 시 True."""
+    ymd = today_ymd()
+    now = now_kst()
+    async with get_db() as db:
+        await db.execute(
+            "INSERT OR IGNORE INTO users(user_id,username,joined_at,last_seen) VALUES(?,?,?,?)",
+            (user_id, username, now, now),
+        )
+        cur = await db.execute(
+            "SELECT checked_in FROM daily WHERE user_id=? AND ymd=?", (user_id, ymd)
+        )
+        row = await cur.fetchone()
+        if row and row["checked_in"]:
+            return False
+        await db.execute(
+            "INSERT INTO daily(user_id,ymd,chat_count,checked_in) VALUES(?,?,0,1) "
+            "ON CONFLICT(user_id,ymd) DO UPDATE SET checked_in=1",
+            (user_id, ymd),
+        )
+        await db.commit()
+        return True
 
 
 async def increment_chat(user_id: int, username: str | None):
