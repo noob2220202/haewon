@@ -21,10 +21,6 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Pr
 /* 배경 블롭: 모바일에서 OFF */
 body::before,body::after{display:none}
 
-/* overlay */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:99}
-.overlay.show{display:block}
-
 /* mobile 상단 바 — 항상 보임 */
 .mobile-header{
   display:flex;position:fixed;top:0;left:0;right:0;height:56px;
@@ -192,7 +188,6 @@ input:checked+.slider::before{transform:translateX(20px)}
   body::after{width:400px;height:400px;background:rgba(92,200,255,0.12);bottom:-80px;right:-80px}
   .mobile-header{display:none}
   .layout{padding-top:0}
-  .overlay{display:none !important}
   .sidebar{
     display:flex;position:sticky;top:0;
     width:220px;height:100vh;
@@ -240,9 +235,6 @@ input:checked+.slider::before{transform:translateX(20px)}
   <span class="gem">💎</span>
   <span class="title">포인트봇</span>
 </header>
-
-<!-- overlay -->
-<div class="overlay" id="overlay"></div>
 
 <div class="layout">
   <aside class="sidebar" id="sidebar">
@@ -559,21 +551,28 @@ input:checked+.slider::before{transform:translateX(20px)}
 </div>
 
 <script>
-function toggleSidebar(){
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('show');
+var sidebar = document.getElementById('sidebar');
+
+function toggleSidebar(e){
+  e && e.stopPropagation();
+  sidebar.classList.toggle('open');
 }
 function closeSidebar(){
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
+  sidebar.classList.remove('open');
 }
+
+// 사이드바 바깥 터치/클릭 시 닫기
+document.addEventListener('click', function(e){
+  if(sidebar.classList.contains('open') && !sidebar.contains(e.target)){
+    closeSidebar();
+  }
+});
+
 function toggleEdit(uid){
-  const row = document.getElementById('edit-' + uid);
-  row.classList.toggle('open');
+  document.getElementById('edit-' + uid).classList.toggle('open');
 }
 function toggleMobileEdit(id){
-  const el = document.getElementById(id);
-  el.classList.toggle('open');
+  document.getElementById(id).classList.toggle('open');
 }
 </script>
 
