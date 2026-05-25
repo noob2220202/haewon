@@ -289,3 +289,54 @@ async def cmd_checkin(message: Message, bot: Bot):
     else:
         sent = await message.answer(formats.checkin_already(username), parse_mode="HTML")
     asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+
+
+# ── /당근 /채찍 (관리자 포인트 지급/차감) ────────────────────────────────────────
+
+async def _point_cmd(message: Message, bot: Bot, is_add: bool):
+    cfg = await get_cfg()
+    uid = message.from_user.id
+
+    if not await db.is_admin(uid):
+        sent = await message.answer(formats.no_permission(), parse_mode="HTML")
+        await bot.delete_message(message.chat.id, message.message_id)
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    await bot.delete_message(message.chat.id, message.message_id)
+
+    if not message.reply_to_message or not message.reply_to_message.from_user:
+        sent = await message.answer("❌ <i>대상의 메시지에 답장으로 사용해줘요</i>", parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    args = message.text.split(maxsplit=2)
+    if len(args) < 2 or not args[1].isdigit():
+        cmd = "/당근" if is_add else "/채찍"
+        sent = await message.answer(f"❌ <i>사용법: {cmd} 숫자 사유</i>", parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    amount = int(args[1])
+    memo = args[2] if len(args) >= 3 else ""
+    target = message.reply_to_message.from_user
+    delta = amount if is_add else -amount
+
+    await db.upsert_user(target.id, target.username)
+    await db.add_points(target.id, delta, "admin_edit", memo)
+
+    sent = await message.answer(
+        formats.point_cmd_result(target.username, delta, memo),
+        parse_mode="HTML",
+    )
+    asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+
+
+@router.message(Command("당근"))
+async def cmd_carrot(message: Message, bot: Bot):
+    await _point_cmd(message, bot, is_add=True)
+
+
+@router.message(Command("채찍"))
+async def cmd_whip(message: Message, bot: Bot):
+    await _point_cmd(message, bot, is_add=False)

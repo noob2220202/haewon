@@ -75,6 +75,18 @@ def group_only() -> str:
     return "❌ <i>그룹에서만 사용할 수 있어요</i>"
 
 
+def point_cmd_result(username: str | None, delta: int, memo: str) -> str:
+    name = f"@{username}" if username else "유저"
+    sign = "+" if delta >= 0 else ""
+    emoji = "🥕" if delta >= 0 else "🔴"
+    reason = f"\n📝 <i>{memo}</i>" if memo else ""
+    return (
+        f"<blockquote>{emoji} <b>포인트 {'지급' if delta >= 0 else '차감'}</b></blockquote>\n"
+        f"🏷 <b>{name}</b>\n"
+        f"💎 <b><u>{sign}{fmt_num(delta)} P</u></b>{reason}"
+    )
+
+
 def checkin_success(username: str | None, points: int) -> str:
     name = f"@{username}" if username else "누군가"
     return (
