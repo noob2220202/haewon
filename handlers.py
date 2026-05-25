@@ -113,13 +113,16 @@ async def cmd_myinfo(message: Message, bot: Bot):
         asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
         return
 
+    is_admin = await db.is_admin(uid)
     user = await db.get_user(uid)
-    daily = await db.get_daily_count(uid)
+
     if user is None:
-        sent = await message.answer(
-            "아직 채팅 기록이 없어요!", parse_mode="HTML"
-        )
+        sent = await message.answer("아직 채팅 기록이 없어요!", parse_mode="HTML")
     else:
+        if not is_admin:
+            await db.add_points(uid, -5, "info_view", "/내정보 조회")
+        user = await db.get_user(uid)
+        daily = await db.get_daily_count(uid)
         sent = await message.answer(
             formats.my_info(user["username"], daily, user["total_chat"], user["points"]),
             parse_mode="HTML",
@@ -127,6 +130,41 @@ async def cmd_myinfo(message: Message, bot: Bot):
     asyncio.create_task(
         delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"])
     )
+
+
+# ── /정보 (관리자: 타인 조회) ──────────────────────────────────────────────────
+
+@router.message(Command("정보"))
+async def cmd_info(message: Message, bot: Bot):
+    cfg = await get_cfg()
+    uid = message.from_user.id
+    await bot.delete_message(message.chat.id, message.message_id)
+
+    if not await db.is_admin(uid):
+        sent = await message.answer(formats.no_permission(), parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    target = None
+    if message.reply_to_message and message.reply_to_message.from_user:
+        target = await db.get_user(message.reply_to_message.from_user.id)
+    else:
+        args = message.text.split(maxsplit=1)
+        if len(args) >= 2:
+            name = args[1].lstrip("@")
+            target = await db.get_user_by_username(name)
+
+    if target is None:
+        sent = await message.answer("❌ <i>유저를 찾을 수 없어요\n사용법: /정보 @유저명  또는 대상 메시지에 답장</i>", parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    daily = await db.get_daily_count(target["user_id"])
+    sent = await message.answer(
+        formats.my_info(target["username"], daily, target["total_chat"], target["points"]),
+        parse_mode="HTML",
+    )
+    asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
 
 
 # ── /랭크 ────────────────────────────────────────────────────────────────────

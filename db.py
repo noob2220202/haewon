@@ -115,6 +115,14 @@ async def get_user(user_id: int) -> aiosqlite.Row | None:
         return await cur.fetchone()
 
 
+async def get_user_by_username(username: str) -> aiosqlite.Row | None:
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT * FROM users WHERE LOWER(username)=LOWER(?)", (username,)
+        )
+        return await cur.fetchone()
+
+
 async def get_daily_count(user_id: int, ymd: str | None = None) -> int:
     ymd = ymd or today_ymd()
     async with get_db() as db:
