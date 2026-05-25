@@ -283,7 +283,7 @@ input:checked+.slider::before{transform:translateX(20px)}
         <div class="stat-value">{{ "{:,}".format(stats.total_users) }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">총 포인트</div>
+        <div class="stat-label">총 당근</div>
         <div class="stat-value gold">{{ "{:,}".format(stats.total_points) }}</div>
       </div>
       <div class="stat-card">
@@ -295,7 +295,7 @@ input:checked+.slider::before{transform:translateX(20px)}
         <div class="stat-value">{{ "{:,}".format(stats.surprise_count) }}</div>
       </div>
     </div>
-    <div class="section-title">최근 포인트 변동</div>
+    <div class="section-title">최근 당근 변동</div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>유저</th><th>변동</th><th>사유</th><th>메모</th><th>시각</th></tr></thead>
@@ -303,7 +303,7 @@ input:checked+.slider::before{transform:translateX(20px)}
           {% for l in logs %}
           <tr>
             <td>{% if l.username %}<b>@{{ l.username }}</b>{% else %}<span class="mono">{{ l.user_id }}</span>{% endif %}</td>
-            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">{% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} P</td>
+            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">{% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} 🥕</td>
             <td><span class="badge badge-{{ l.reason }}">{{ l.reason }}</span></td>
             <td style="color:var(--muted)">{{ l.memo or '—' }}</td>
             <td style="color:var(--muted);font-size:0.78rem">{{ l.created_at[:16] if l.created_at else '—' }}</td>
@@ -326,7 +326,7 @@ input:checked+.slider::before{transform:translateX(20px)}
     <div class="table-wrap users-table">
       <table>
         <thead><tr>
-          <th>유저</th><th>당일 채팅</th><th>누적 채팅</th><th>포인트</th><th></th>
+          <th>유저</th><th>당일 채팅</th><th>누적 채팅</th><th>당근</th><th></th>
         </tr></thead>
         <tbody>
           {% for u in users %}
@@ -337,7 +337,7 @@ input:checked+.slider::before{transform:translateX(20px)}
             </td>
             <td class="mono">{{ "{:,}".format(u.daily_chat) }}</td>
             <td class="mono">{{ "{:,}".format(u.total_chat) }}</td>
-            <td class="mono" style="color:var(--gold)">{{ "{:,}".format(u.points) }} P</td>
+            <td class="mono" style="color:var(--gold)">{{ "{:,}".format(u.points) }} 🥕</td>
             <td>
               <button type="button" class="btn btn-ghost btn-sm btn-icon"
                 onclick="toggleEdit('{{ u.user_id }}')">✏️</button>
@@ -356,7 +356,7 @@ input:checked+.slider::before{transform:translateX(20px)}
                     <input type="number" name="total_chat" value="{{ u.total_chat }}" min="0">
                   </div>
                   <div class="edit-field">
-                    <label>포인트</label>
+                    <label>당근</label>
                     <input type="number" name="points" value="{{ u.points }}" min="0">
                   </div>
                   <div class="edit-actions">
@@ -396,7 +396,7 @@ input:checked+.slider::before{transform:translateX(20px)}
             <div class="user-stat-val">{{ "{:,}".format(u.total_chat) }}</div>
           </div>
           <div class="user-stat">
-            <div class="user-stat-label">포인트</div>
+            <div class="user-stat-label">당근</div>
             <div class="user-stat-val gold">{{ "{:,}".format(u.points) }}</div>
           </div>
         </div>
@@ -412,7 +412,7 @@ input:checked+.slider::before{transform:translateX(20px)}
                 <input type="number" name="total_chat" value="{{ u.total_chat }}" min="0">
               </div>
               <div class="mobile-edit-field">
-                <label>포인트</label>
+                <label>당근</label>
                 <input type="number" name="points" value="{{ u.points }}" min="0">
               </div>
             </div>
@@ -475,7 +475,7 @@ input:checked+.slider::before{transform:translateX(20px)}
           <label>출석 체크 활성화</label>
         </div>
         <div class="form-group">
-          <label>출석 지급 포인트</label>
+          <label>출석 지급 당근</label>
           <input type="number" name="checkin_points" value="{{ cfg.checkin_points }}" min="0" style="max-width:200px">
         </div>
 
@@ -495,7 +495,7 @@ input:checked+.slider::before{transform:translateX(20px)}
           <label>돌발 포인트 활성화</label>
         </div>
         <div class="form-group">
-          <label>지급 포인트</label>
+          <label>지급 당근</label>
           <input type="number" name="surprise_points" value="{{ cfg.surprise_points }}" min="1">
         </div>
         <div class="form-group">
@@ -542,7 +542,7 @@ input:checked+.slider::before{transform:translateX(20px)}
     </div>
 
     {% elif page == "logs" %}
-    <div class="page-title">📜 포인트 로그</div>
+    <div class="page-title">📜 당근 로그</div>
     <div class="log-filter">
       <a href="/logs" class="filter-btn {% if not reason %}active{% endif %}">전체</a>
       <a href="/logs?reason=settle" class="filter-btn {% if reason=='settle' %}active{% endif %}">🏅 정산</a>
@@ -557,7 +557,7 @@ input:checked+.slider::before{transform:translateX(20px)}
           <tr>
             <td class="mono" style="color:var(--muted)">{{ l.id }}</td>
             <td>{% if l.username %}<b>@{{ l.username }}</b>{% else %}<span class="mono">{{ l.user_id }}</span>{% endif %}</td>
-            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">{% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} P</td>
+            <td class="mono {% if l.delta > 0 %}pos{% else %}neg{% endif %}">{% if l.delta > 0 %}+{% endif %}{{ "{:,}".format(l.delta) }} 🥕</td>
             <td><span class="badge badge-{{ l.reason }}">{{ l.reason }}</span></td>
             <td style="color:var(--muted)">{{ l.memo or '—' }}</td>
             <td style="color:var(--muted);font-size:0.78rem">{{ l.created_at[:16] if l.created_at else '—' }}</td>

@@ -9,7 +9,7 @@ def my_info(username: str | None, daily: int, total: int, points: int) -> str:
         f"🗣 <b>{name}</b>\n\n"
         f"✉️ <i>오늘 채팅</i>      <b>{fmt_num(daily)}</b>\n"
         f"📮 <i>누적 채팅</i>      <b>{fmt_num(total)}</b>\n\n"
-        f"🥕 <i>보유 포인트</i>   <b><u>{fmt_num(points)} P</u></b>"
+        f"🥕 <i>보유 당근</i>   <b><u>{fmt_num(points)} 🥕</u></b>"
     )
 
 
@@ -36,15 +36,15 @@ def rank_page(title: str, rows: list, page: int, total_pages: int, value_key: st
         else:
             lines.append(f"<b>{rank}.</b> {name}  —  {val}")
     if title.startswith("📅"):
-        lines.append("\n<i>🕛 자정에 1위부터 포인트 차등 지급</i>")
+        lines.append("\n<i>🕛 자정에 1위부터 당근 차등 지급</i>")
     return "\n".join(lines)
 
 
 def surprise_appear(points: int) -> str:
     return (
-        f"<blockquote>🎁 <b>돌발 포인트!</b></blockquote>\n"
+        f"<blockquote>🎁 <b>돌발 당근!</b></blockquote>\n"
         f"⚡️ <i>가장 빨리 누르는 사람이 가져가요</i>\n"
-        f"💎 <b>+{fmt_num(points)} P</b>"
+        f"🥕 <b>+{fmt_num(points)} 🥕</b>"
     )
 
 
@@ -53,7 +53,7 @@ def surprise_winner(username: str | None, points: int) -> str:
     return (
         f"<blockquote>🎉 <b>당첨!</b></blockquote>\n"
         f"🏷 <b>{name}</b> 님이\n"
-        f"💎 <b><u>+{fmt_num(points)} P</u></b> 획득 ⚡️"
+        f"🥕 <b><u>+{fmt_num(points)} 🥕</u></b> 획득 ⚡️"
     )
 
 
@@ -81,9 +81,9 @@ def point_cmd_result(username: str | None, delta: int, memo: str) -> str:
     emoji = "🥕" if delta >= 0 else "🔴"
     reason = f"\n📝 <i>{memo}</i>" if memo else ""
     return (
-        f"<blockquote>{emoji} <b>포인트 {'지급' if delta >= 0 else '차감'}</b></blockquote>\n"
+        f"<blockquote>{emoji} <b>당근 {'지급' if delta >= 0 else '차감'}</b></blockquote>\n"
         f"🏷 <b>{name}</b>\n"
-        f"💎 <b><u>{sign}{fmt_num(delta)} P</u></b>{reason}"
+        f"🥕 <b><u>{sign}{fmt_num(delta)} 🥕</u></b>{reason}"
     )
 
 
@@ -92,7 +92,7 @@ def checkin_success(username: str | None, points: int) -> str:
     return (
         f"<blockquote>✅ <b>출석 완료!</b></blockquote>\n"
         f"🏷 <b>{name}</b>\n"
-        f"💎 <b><u>+{fmt_num(points)} P</u></b> 지급됐어요 🎉"
+        f"🥕 <b><u>+{fmt_num(points)} 🥕</u></b> 지급됐어요 🎉"
     )
 
 
