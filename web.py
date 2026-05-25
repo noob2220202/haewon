@@ -128,19 +128,21 @@ async def settle_save(request: Request):
     if not check_session(request):
         raise HTTPException(status_code=401)
     form = await request.form()
-    rewards = []
-    for i in range(1, 11):
-        val = form.get(f"r{i}", "0")
-        rewards.append(int(val) if str(val).isdigit() else 0)
+    def _int(v, default=0):
+        try: return max(0, int(v))
+        except: return default
+
+    rewards = [_int(form.get(f"r{i}", 0)) for i in range(1, 31)]
     enabled = form.get("settle_enabled") == "on"
     checkin_enabled = form.get("checkin_enabled") == "on"
-    checkin_points_raw = form.get("checkin_points", "30")
-    checkin_points = int(checkin_points_raw) if str(checkin_points_raw).isdigit() else 30
     await save_cfg({
         "settle_enabled": enabled,
         "settle_rewards": rewards,
+        "settle_range_31_40":  _int(form.get("range_31_40", 0)),
+        "settle_range_41_50":  _int(form.get("range_41_50", 0)),
+        "settle_range_51_100": _int(form.get("range_51_100", 0)),
         "checkin_enabled": checkin_enabled,
-        "checkin_points": checkin_points,
+        "checkin_points": _int(form.get("checkin_points", 30), 30),
     })
     return RedirectResponse("/settle", status_code=303)
 

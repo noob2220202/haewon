@@ -119,9 +119,15 @@ input:checked+.slider::before{transform:translateX(20px)}
 
 /* rewards */
 .rewards-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:18px}
+.rewards-grid-30{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:18px}
 .reward-item{text-align:center}
-.reward-item label{margin-bottom:4px;font-size:0.72rem;color:var(--gold)}
-.reward-item input{text-align:center;font-family:'Space Grotesk',monospace;padding:7px 2px}
+.reward-item label{margin-bottom:4px;font-size:0.68rem;color:var(--gold)}
+.reward-item input{text-align:center;font-family:'Space Grotesk',monospace;padding:6px 2px;font-size:0.82rem}
+/* range */
+.range-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.range-item{display:flex;flex-direction:column;gap:5px}
+.range-item label{font-size:0.75rem;color:var(--accent2);text-transform:none;letter-spacing:0}
+.range-item input{text-align:center;font-family:'Space Grotesk',monospace}
 
 /* search */
 .search-bar{display:flex;gap:8px;margin-bottom:16px}
@@ -433,9 +439,10 @@ input:checked+.slider::before{transform:translateX(20px)}
           </label>
           <label>자정 정산 활성화</label>
         </div>
-        <div class="section-title">등수별 지급 포인트</div>
-        <div class="rewards-grid">
-          {% for i in range(10) %}
+
+        <div class="section-title">1 ~ 30등 (개별 설정)</div>
+        <div class="rewards-grid-30">
+          {% for i in range(30) %}
           <div class="reward-item">
             <label>{{ i+1 }}등</label>
             <input type="number" name="r{{ i+1 }}" value="{{ cfg.settle_rewards[i] if i < cfg.settle_rewards|length else 0 }}" min="0">
@@ -443,7 +450,23 @@ input:checked+.slider::before{transform:translateX(20px)}
           {% endfor %}
         </div>
 
-        <div class="section-title" style="margin-top:28px">출석 체크 (/출석)</div>
+        <div class="section-title">구간 설정</div>
+        <div class="range-grid">
+          <div class="range-item">
+            <label>31 ~ 40등</label>
+            <input type="number" name="range_31_40" value="{{ cfg.settle_range_31_40 }}" min="0">
+          </div>
+          <div class="range-item">
+            <label>41 ~ 50등</label>
+            <input type="number" name="range_41_50" value="{{ cfg.settle_range_41_50 }}" min="0">
+          </div>
+          <div class="range-item">
+            <label>51 ~ 100등</label>
+            <input type="number" name="range_51_100" value="{{ cfg.settle_range_51_100 }}" min="0">
+          </div>
+        </div>
+
+        <div class="section-title">출석 체크 (/출석)</div>
         <div class="toggle-wrap">
           <label class="toggle">
             <input type="checkbox" name="checkin_enabled" {% if cfg.checkin_enabled %}checked{% endif %}>

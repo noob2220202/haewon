@@ -13,7 +13,10 @@ async def get_cfg() -> dict:
         raw = await get_config_raw()
         _cache = {
             "settle_enabled": raw.get("settle_enabled", "true") == "true",
-            "settle_rewards": json.loads(raw.get("settle_rewards", "[100,90,80,70,60,50,40,30,20,10]")),
+            "settle_rewards": json.loads(raw.get("settle_rewards", "[100,90,80,70,60,50,40,30,20,10,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]")),
+            "settle_range_31_40": int(raw.get("settle_range_31_40", "0")),
+            "settle_range_41_50": int(raw.get("settle_range_41_50", "0")),
+            "settle_range_51_100": int(raw.get("settle_range_51_100", "0")),
             "surprise_enabled": raw.get("surprise_enabled", "true") == "true",
             "surprise_points": int(raw.get("surprise_points", "50")),
             "surprise_chance": float(raw.get("surprise_chance", "0.001")),

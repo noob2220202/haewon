@@ -17,17 +17,30 @@ async def settle():
 
     from datetime import datetime, timedelta, timezone
     yesterday = (datetime.now(KST) - timedelta(days=1)).strftime("%Y-%m-%d")
-    rows = await get_daily_rank(ymd=yesterday, limit=len(cfg["settle_rewards"]))
+    rows = await get_daily_rank(ymd=yesterday, limit=100)
 
-    rewards: list[int] = cfg["settle_rewards"]
+    rewards: list[int] = cfg["settle_rewards"]  # 30개 (1~30등)
+    ranges = [
+        (31, 40,  cfg["settle_range_31_40"]),
+        (41, 50,  cfg["settle_range_41_50"]),
+        (51, 100, cfg["settle_range_51_100"]),
+    ]
+    rewarded = 0
     for rank, row in enumerate(rows, start=1):
-        if rank > len(rewards):
-            break
-        pts = rewards[rank - 1]
-        await add_points(row["user_id"], pts, "settle", f"{rank}등")
-        log.info("settle rank=%d user=%d +%d", rank, row["user_id"], pts)
+        pts = 0
+        if rank <= len(rewards):
+            pts = rewards[rank - 1]
+        else:
+            for lo, hi, p in ranges:
+                if lo <= rank <= hi:
+                    pts = p
+                    break
+        if pts > 0:
+            await add_points(row["user_id"], pts, "settle", f"{rank}등")
+            log.info("settle rank=%d user=%d +%d", rank, row["user_id"], pts)
+            rewarded += 1
 
-    log.info("settle done: %d users rewarded", min(len(rows), len(rewards)))
+    log.info("settle done: %d users rewarded", rewarded)
 
 
 def setup_scheduler() -> AsyncIOScheduler:
