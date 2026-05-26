@@ -2,6 +2,21 @@ def fmt_num(n: int) -> str:
     return f"{n:,}"
 
 
+def settle_announce(rewarded: list[tuple[int, dict, int]]) -> str:
+    """rewarded: list of (rank, row, pts) sorted by rank"""
+    medals = {1: "🥇", 2: "🥈", 3: "🥉"}
+    lines = ["<blockquote>📊 <b>어제 정산 완료!</b></blockquote>\n"]
+    for rank, row, pts in rewarded[:10]:
+        name = f"@{row['username']}" if row["username"] else str(row["user_id"])
+        medal = medals.get(rank, f"<b>{rank}.</b>")
+        chat = fmt_num(row["chat_count"])
+        lines.append(f"{medal} {name}  {chat}회 → 🥕<b>+{fmt_num(pts)}</b>")
+    if len(rewarded) > 10:
+        lines.append(f"<i>  ···  외 {fmt_num(len(rewarded)-10)}명</i>")
+    lines.append(f"\n<i>총 {fmt_num(len(rewarded))}명 당근 지급 완료 🎉</i>")
+    return "\n".join(lines)
+
+
 def my_info(username: str | None, daily: int, total: int, points: int) -> str:
     name = f"@{username}" if username else "알 수 없음"
     return (

@@ -23,7 +23,7 @@ async def main():
     dp = Dispatcher()
     dp.include_router(router)
 
-    scheduler = setup_scheduler()
+    scheduler = setup_scheduler(bot)
     scheduler.start()
 
     log.info("bot starting")

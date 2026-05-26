@@ -12,6 +12,7 @@ from aiogram.filters import Command
 import db
 import formats
 from config import get_cfg
+from db import set_config
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -19,6 +20,7 @@ router = Router()
 # ── in-memory state ─────────────────────────────────────────────────────────
 _cooldown: dict[int, float] = {}      # user_id -> expire_ts
 _surprise: dict[int, bool] = {}       # msg_id   -> claimed
+_known_chat_id: int | None = None     # 마지막 그룹 chat_id (정산 공지용)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -65,6 +67,11 @@ async def on_message(message: Message, bot: Bot):
     username = message.from_user.username
     await db.increment_chat(uid, username)
     await _surprise_roll(message, bot, cfg)
+
+    global _known_chat_id
+    if _known_chat_id != message.chat.id:
+        _known_chat_id = message.chat.id
+        await set_config("group_chat_id", str(message.chat.id))
 
 
 async def _surprise_roll(message: Message, bot: Bot, cfg: dict):
@@ -175,8 +182,8 @@ async def cmd_rank(message: Message, bot: Bot):
     uid = message.from_user.id
     await bot.delete_message(message.chat.id, message.message_id)
 
-    if message.chat.type == "private" and not await db.is_admin(uid):
-        sent = await message.answer(formats.group_only(), parse_mode="HTML")
+    if not await db.is_admin(uid):
+        sent = await message.answer(formats.no_permission(), parse_mode="HTML")
         asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
         return
 
