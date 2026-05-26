@@ -2,16 +2,16 @@ def fmt_num(n: int) -> str:
     return f"{n:,}"
 
 
-def settle_announce(rewarded: list[tuple[int, dict, int]]) -> str:
-    """rewarded: list of (rank, row, pts) sorted by rank"""
-    lines = ["<blockquote>📊 <b>어제 정산 완료!</b></blockquote>\n"]
-    for rank, row, pts in rewarded[:10]:
+def settle_page(all_rewarded: list, page: int, total_pages: int) -> str:
+    per_page = 10
+    offset = page * per_page
+    rows = all_rewarded[offset:offset + per_page]
+    lines = [f"<blockquote>📊 <b>어제 정산 완료!</b>  <i>· {offset+1}~{offset+len(rows)}위</i></blockquote>\n"]
+    for rank, row, pts in rows:
         name = f"@{row['username']}" if row["username"] else str(row["user_id"])
         chat = fmt_num(row["chat_count"])
         lines.append(f"🥕 <b>{rank}.</b> {name}  {chat}회 → <b>+{fmt_num(pts)}</b>")
-    if len(rewarded) > 10:
-        lines.append(f"<i>  ···  외 {fmt_num(len(rewarded)-10)}명</i>")
-    lines.append(f"\n<i>총 {fmt_num(len(rewarded))}명 당근 지급 완료 🎉</i>")
+    lines.append(f"\n<i>총 {fmt_num(len(all_rewarded))}명 당근 지급 완료 🎉</i>")
     return "\n".join(lines)
 
 

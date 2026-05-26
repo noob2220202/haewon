@@ -234,6 +234,27 @@ async def cb_noop(cb: CallbackQuery):
     await cb.answer()
 
 
+# ── 정산 페이지 ────────────────────────────────────────────────────────────────
+
+@router.callback_query(F.data.startswith("settle_"))
+async def cb_settle(cb: CallbackQuery):
+    parts = cb.data.split("_")   # settle_{YYYYMMDD}_{page}
+    ymd_compact = parts[1]
+    page = int(parts[2])
+    ymd = f"{ymd_compact[:4]}-{ymd_compact[4:6]}-{ymd_compact[6:]}"
+
+    from scheduler import calc_settle_rewarded, _settle_kb, PER_PAGE
+    rewarded_list = await calc_settle_rewarded(ymd)
+    total_pages = max(1, (len(rewarded_list) + PER_PAGE - 1) // PER_PAGE)
+
+    await cb.message.edit_text(
+        formats.settle_page(rewarded_list, page, total_pages),
+        parse_mode="HTML",
+        reply_markup=_settle_kb(ymd_compact, page, total_pages),
+    )
+    await cb.answer()
+
+
 # ── 돌발 버튼 ─────────────────────────────────────────────────────────────────
 
 @router.callback_query(F.data == "surprise_grab")
