@@ -38,7 +38,7 @@ def pin_caption(round_no: int, totals: dict, status: str = "betting", remain_sec
         f"🟢 타이: <b>{_fmt(t_amt)}🥕</b> ({t_cnt}명)\n"
         f"🔴 뱅커: <b>{_fmt(b_amt)}🥕</b> ({b_cnt}명)\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"💡 /베팅 → 버튼 선택 → 금액 입력"
+        f"💡 /베팅 <금액> → 버튼 선택"
     )
 
 

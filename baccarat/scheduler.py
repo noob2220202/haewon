@@ -143,12 +143,12 @@ async def _roll_all(bot: Bot, chat_id: int):
         await asyncio.sleep(DICE_DELAY_SEC)
         return msg.dice.value
 
-    p1 = await send_die("🔴 <b>플레이어</b>")
+    p1 = await send_die("🔵 <b>플레이어</b>")
     p2 = await send_die()
     p_dice = [p1, p2]
     p_score = gm.hand_score(p_dice)
 
-    b1 = await send_die("🔵 <b>뱅커</b>")
+    b1 = await send_die("🔴 <b>뱅커</b>")
     b2 = await send_die()
     b_dice = [b1, b2]
     b_score = gm.hand_score(b_dice)
@@ -159,12 +159,12 @@ async def _roll_all(bot: Bot, chat_id: int):
     p3 = None
     if not (p_natural or b_natural):
         if gm.player_draws(p_score):
-            p3 = await send_die("🔴 <b>플레이어 추가카드</b>")
+            p3 = await send_die("🔵 <b>플레이어 추가카드</b>")
             p_dice.append(p3)
             p_score = gm.hand_score(p_dice)
 
         if gm.banker_draws(b_score, p3 is not None, p3):
-            b3 = await send_die("🔵 <b>뱅커 추가카드</b>")
+            b3 = await send_die("🔴 <b>뱅커 추가카드</b>")
             b_dice.append(b3)
 
     result = gm.determine_result(gm.hand_score(p_dice), gm.hand_score(b_dice))
