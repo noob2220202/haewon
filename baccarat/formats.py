@@ -34,9 +34,9 @@ def pin_caption(round_no: int, totals: dict, status: str = "betting", remain_sec
         f"🎲 바카라  |  제 <b>{round_no}</b>회차  |  {status_str}\n"
         f"━━━━━━━━━━━━━━━\n"
         f"📊 베팅 현황\n"
-        f"🔴 플레이어: <b>{_fmt(p_amt)}🥕</b> ({p_cnt}명)\n"
+        f"🔵 플레이어: <b>{_fmt(p_amt)}🥕</b> ({p_cnt}명)\n"
         f"🟢 타이: <b>{_fmt(t_amt)}🥕</b> ({t_cnt}명)\n"
-        f"🔵 뱅커: <b>{_fmt(b_amt)}🥕</b> ({b_cnt}명)\n"
+        f"🔴 뱅커: <b>{_fmt(b_amt)}🥕</b> ({b_cnt}명)\n"
         f"━━━━━━━━━━━━━━━\n"
         f"💡 /베팅 → 버튼 선택 → 금액 입력"
     )
@@ -57,9 +57,9 @@ def betting_closed(round_no: int, totals: dict) -> str:
     return (
         f"🔒 <b>제 {round_no}회차 베팅 마감!</b>\n"
         f"10초 후 주사위를 굴립니다.\n\n"
-        f"🔴 플레이어: <b>{_fmt(p_amt)}🥕</b> ({p_cnt}명)\n"
+        f"🔵 플레이어: <b>{_fmt(p_amt)}🥕</b> ({p_cnt}명)\n"
         f"🟢 타이: <b>{_fmt(t_amt)}🥕</b> ({t_cnt}명)\n"
-        f"🔵 뱅커: <b>{_fmt(b_amt)}🥕</b> ({b_cnt}명)"
+        f"🔴 뱅커: <b>{_fmt(b_amt)}🥕</b> ({b_cnt}명)"
     )
 
 
@@ -68,16 +68,16 @@ def round_result(round_no: int, p_dice: list, b_dice: list, result: str, bets: l
     b_score = hand_score(b_dice)
 
     result_line = {
-        "player": "🔴 <b>플레이어 승!</b>",
-        "banker": "🔵 <b>뱅커 승!</b>",
+        "player": "🔵 <b>플레이어 승!</b>",
+        "banker": "🔴 <b>뱅커 승!</b>",
         "tie":    "🟢 <b>타이!</b>",
     }[result]
 
     lines = [
         f"🎲 <b>제 {round_no}회차 결과</b>",
         "",
-        f"🔴 플레이어  {dice_label(p_dice)} = <b>{p_score}점</b>",
-        f"🔵 뱅커      {dice_label(b_dice)} = <b>{b_score}점</b>",
+        f"🔵 플레이어  {dice_label(p_dice)} = <b>{p_score}점</b>",
+        f"🔴 뱅커      {dice_label(b_dice)} = <b>{b_score}점</b>",
         "━━━━━━━━━",
         result_line,
     ]
@@ -106,7 +106,7 @@ def bet_select_prompt() -> str:
 
 def bet_side_selected(side: str, balance: int) -> str:
     kor = {"player": "플레이어", "banker": "뱅커", "tie": "타이"}[side]
-    emoji = {"player": "🔴", "banker": "🔵", "tie": "🟢"}[side]
+    emoji = {"player": "🔵", "banker": "🔴", "tie": "🟢"}[side]
     return (
         f"{emoji} <b>{kor}</b> 선택됨\n"
         f"잔액: <b>{_fmt(balance)}🥕</b>\n"
@@ -116,7 +116,7 @@ def bet_side_selected(side: str, balance: int) -> str:
 
 def bet_success(side: str, amount: int) -> str:
     kor = {"player": "플레이어", "banker": "뱅커", "tie": "타이"}[side]
-    emoji = {"player": "🔴", "banker": "🔵", "tie": "🟢"}[side]
+    emoji = {"player": "🔵", "banker": "🔴", "tie": "🟢"}[side]
     return f"✅ {emoji} <b>{kor}</b>에 <b>{_fmt(amount)}🥕</b> 베팅 완료!"
 
 

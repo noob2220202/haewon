@@ -10,7 +10,7 @@
 PAYOUTS = {"player": 2.0, "banker": 1.95, "tie": 6.0}
 
 SIDE_KOR = {"player": "플레이어", "banker": "뱅커", "tie": "타이"}
-SIDE_EMOJI = {"player": "🔴", "banker": "🔵", "tie": "🟢"}
+SIDE_EMOJI = {"player": "🔵", "banker": "🔴", "tie": "🟢"}
 
 
 def hand_score(dice: list[int]) -> int:

@@ -11,8 +11,8 @@ FONT_PATH = os.path.join(os.path.dirname(__file__), "fonts", "NanumGothicBold.tt
 # 색상
 BG_COLOR       = (18, 38, 18)
 GRID_COLOR     = (40, 70, 40)
-PLAYER_COLOR   = (200, 50, 50)     # 빨강
-BANKER_COLOR   = (50, 100, 220)    # 파랑
+PLAYER_COLOR   = (50, 100, 220)    # 파랑
+BANKER_COLOR   = (200, 50, 50)     # 빨강
 TIE_COLOR      = (40, 180, 80)     # 초록
 TIE_LINE_COLOR = (40, 180, 80)
 TEXT_COLOR     = (240, 240, 240)

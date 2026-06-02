@@ -82,9 +82,9 @@ async def cmd_bet(message: Message, state: FSMContext, bot: Bot):
     round_id = round_row["id"]
 
     kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🔴 플레이어 (2배)", callback_data=f"bet_player_{uid}_{round_id}"),
-        InlineKeyboardButton(text="🟢 타이 (6배)",    callback_data=f"bet_tie_{uid}_{round_id}"),
-        InlineKeyboardButton(text="🔵 뱅커 (1.95배)", callback_data=f"bet_banker_{uid}_{round_id}"),
+        InlineKeyboardButton(text="🔵 플레이어  ×2.0",  callback_data=f"bet_player_{uid}_{round_id}"),
+        InlineKeyboardButton(text="🟢 타이  ×6.0",      callback_data=f"bet_tie_{uid}_{round_id}"),
+        InlineKeyboardButton(text="🔴 뱅커  ×1.95",     callback_data=f"bet_banker_{uid}_{round_id}"),
     ]])
 
     sent = await message.reply(fmt.bet_select_prompt(), reply_markup=kb)
