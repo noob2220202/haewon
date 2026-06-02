@@ -10,7 +10,9 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
 
 load_dotenv()
 logging.basicConfig(
@@ -20,7 +22,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 import db
-from .handlers import router
+from baccarat.handlers import router
 
 
 async def main():
