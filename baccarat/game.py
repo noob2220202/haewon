@@ -68,13 +68,16 @@ def calc_all_payouts(bets: list, result: str) -> dict:
     """
     bets: [{user_id, side, amount}, ...]
     result: 'player' | 'banker' | 'tie'
-    Returns {user_id: payout_amount}  — 패배 시 0
+    Returns {user_id: payout_amount}
+    - 타이 결과 시 플레이어/뱅커 베팅은 원금 반환 (push)
     """
     payouts = {}
     for bet in bets:
         uid = bet["user_id"]
         if bet["side"] == result:
             payouts[uid] = calc_payout(result, bet["amount"])
+        elif result == "tie" and bet["side"] in ("player", "banker"):
+            payouts[uid] = bet["amount"]  # push: 원금 반환
         else:
             payouts[uid] = 0
     return payouts

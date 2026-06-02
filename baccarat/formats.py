@@ -82,13 +82,17 @@ def round_result(round_no: int, p_dice: list, b_dice: list, result: str, bets: l
         result_line,
     ]
 
-    winners = [(b, payouts.get(b["user_id"], 0)) for b in bets if b["side"] == result]
-    if winners:
+    # 타이 시 플레이어/뱅커 베팅은 push(원금반환)도 포함
+    paid = [(b, payouts.get(b["user_id"], 0)) for b in bets if payouts.get(b["user_id"], 0) > 0]
+    if paid:
         lines.append("")
         lines.append("💰 지급 내역")
-        for bet, payout in winners:
+        for bet, payout in paid:
             name = bet["username"] or str(bet["user_id"])
-            lines.append(f"🏷 <b>{name}</b>  {_fmt(bet['amount'])}🥕 → <b>{_fmt(payout)}🥕</b>")
+            if result == "tie" and bet["side"] != "tie":
+                lines.append(f"🔄 <b>{name}</b>  {_fmt(bet['amount'])}🥕 → <b>{_fmt(payout)}🥕</b> (반환)")
+            else:
+                lines.append(f"🏷 <b>{name}</b>  {_fmt(bet['amount'])}🥕 → <b>{_fmt(payout)}🥕</b>")
 
     return "\n".join(lines)
 
