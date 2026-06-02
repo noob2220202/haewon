@@ -38,7 +38,7 @@ def pin_caption(round_no: int, totals: dict, status: str = "betting", remain_sec
         f"🟢 타이: <b>{_fmt(t_amt)}🥕</b> ({t_cnt}명)\n"
         f"🔴 뱅커: <b>{_fmt(b_amt)}🥕</b> ({b_cnt}명)\n"
         f"━━━━━━━━━━━━━━━\n"
-        f"💡 /베팅 <금액> → 버튼 선택"
+        f"💡 /베팅 [금액] → 버튼 선택"
     )
 
 
@@ -87,7 +87,7 @@ def round_result(round_no: int, p_dice: list, b_dice: list, result: str, bets: l
         lines.append("")
         lines.append("💰 지급 내역")
         for bet, payout in winners:
-            name = bet.get("username") or str(bet["user_id"])
+            name = bet["username"] or str(bet["user_id"])
             lines.append(f"🏷 <b>{name}</b>  {_fmt(bet['amount'])}🥕 → <b>{_fmt(payout)}🥕</b>")
 
     return "\n".join(lines)
