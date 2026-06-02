@@ -85,6 +85,7 @@ async def init_db():
                 "INSERT OR IGNORE INTO config(key,value) VALUES(?,?)", (k, v)
             )
         await db.commit()
+    await baccarat_init_tables()
 
 
 # ── users ──────────────────────────────────────────────────────────────────
@@ -357,6 +358,215 @@ async def get_stats() -> dict:
             "today_chatters": today_chatters,
             "surprise_count": surprise_count,
         }
+
+
+# ── baccarat ───────────────────────────────────────────────────────────────
+
+async def baccarat_init_tables():
+    async with get_db() as db:
+        await db.executescript("""
+            CREATE TABLE IF NOT EXISTS baccarat_rounds (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                status      TEXT NOT NULL DEFAULT 'betting',
+                player_dice TEXT DEFAULT NULL,
+                banker_dice TEXT DEFAULT NULL,
+                result      TEXT DEFAULT NULL,
+                created_at  TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                done_at     TEXT DEFAULT NULL
+            );
+            CREATE TABLE IF NOT EXISTS baccarat_bets (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                round_id   INTEGER NOT NULL REFERENCES baccarat_rounds(id),
+                user_id    INTEGER NOT NULL REFERENCES users(user_id),
+                side       TEXT NOT NULL,
+                amount     INTEGER NOT NULL,
+                payout     INTEGER DEFAULT NULL,
+                created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                UNIQUE(round_id, user_id)
+            );
+        """)
+        bac_defaults = {
+            "baccarat_min_bet": "100",
+            "baccarat_max_bet": "0",
+            "baccarat_pin_msg_id": "",
+        }
+        for k, v in bac_defaults.items():
+            await db.execute(
+                "INSERT OR IGNORE INTO config(key,value) VALUES(?,?)", (k, v)
+            )
+        await db.commit()
+
+
+async def baccarat_cleanup_stale():
+    """봇 재시작 시 미완료 회차 환불 처리."""
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT id FROM baccarat_rounds WHERE status IN ('betting','closed','rolling')"
+        )
+        stale = await cur.fetchall()
+        for row in stale:
+            rid = row["id"]
+            bets = await (await db.execute(
+                "SELECT user_id, amount FROM baccarat_bets WHERE round_id=? AND payout IS NULL", (rid,)
+            )).fetchall()
+            for bet in bets:
+                await db.execute(
+                    "UPDATE users SET points=points+? WHERE user_id=?",
+                    (bet["amount"], bet["user_id"]),
+                )
+                await db.execute(
+                    "INSERT INTO log(user_id,delta,reason,memo,created_at) VALUES(?,?,?,?,?)",
+                    (bet["user_id"], bet["amount"], "baccarat_refund", f"stale round#{rid}", now_kst()),
+                )
+            await db.execute(
+                "UPDATE baccarat_rounds SET status='done', done_at=? WHERE id=?",
+                (now_kst(), rid),
+            )
+        await db.commit()
+        return len(stale)
+
+
+async def baccarat_open_round() -> int:
+    async with get_db() as db:
+        cur = await db.execute(
+            "INSERT INTO baccarat_rounds(status,created_at) VALUES('betting',?) RETURNING id",
+            (now_kst(),),
+        )
+        row = await cur.fetchone()
+        await db.commit()
+        return row["id"]
+
+
+async def baccarat_get_round(round_id: int):
+    async with get_db() as db:
+        cur = await db.execute("SELECT * FROM baccarat_rounds WHERE id=?", (round_id,))
+        return await cur.fetchone()
+
+
+async def baccarat_get_active_round():
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT * FROM baccarat_rounds WHERE status='betting' ORDER BY id DESC LIMIT 1"
+        )
+        return await cur.fetchone()
+
+
+async def baccarat_close_betting(round_id: int):
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE baccarat_rounds SET status='closed' WHERE id=?", (round_id,)
+        )
+        await db.commit()
+
+
+async def baccarat_set_rolling(round_id: int):
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE baccarat_rounds SET status='rolling' WHERE id=?", (round_id,)
+        )
+        await db.commit()
+
+
+async def baccarat_finish_round(round_id: int, player_dice, banker_dice, result):
+    import json as _json
+    p = _json.dumps(player_dice) if player_dice else None
+    b = _json.dumps(banker_dice) if banker_dice else None
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE baccarat_rounds SET status='done', player_dice=?, banker_dice=?, result=?, done_at=? WHERE id=?",
+            (p, b, result, now_kst(), round_id),
+        )
+        await db.commit()
+
+
+async def baccarat_place_bet(round_id: int, user_id: int, side: str, amount: int) -> bool:
+    """성공 시 True, 이미 베팅했으면 False."""
+    try:
+        async with get_db() as db:
+            await db.execute(
+                "INSERT INTO baccarat_bets(round_id,user_id,side,amount,created_at) VALUES(?,?,?,?,?)",
+                (round_id, user_id, side, amount, now_kst()),
+            )
+            await db.commit()
+        return True
+    except Exception:
+        return False
+
+
+async def baccarat_get_user_bet(round_id: int, user_id: int):
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT * FROM baccarat_bets WHERE round_id=? AND user_id=?",
+            (round_id, user_id),
+        )
+        return await cur.fetchone()
+
+
+async def baccarat_get_bets(round_id: int):
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT b.*, u.username FROM baccarat_bets b JOIN users u ON b.user_id=u.user_id WHERE b.round_id=?",
+            (round_id,),
+        )
+        return await cur.fetchall()
+
+
+async def baccarat_get_totals(round_id: int) -> dict:
+    """Returns {side: (total_amount, bettor_count)}"""
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT side, SUM(amount) as total, COUNT(*) as cnt FROM baccarat_bets WHERE round_id=? GROUP BY side",
+            (round_id,),
+        )
+        rows = await cur.fetchall()
+    result = {"player": (0, 0), "banker": (0, 0), "tie": (0, 0)}
+    for r in rows:
+        result[r["side"]] = (r["total"], r["cnt"])
+    return result
+
+
+async def baccarat_settle(round_id: int, result: str, payouts: dict):
+    """payouts: {user_id: payout_amount}"""
+    async with get_db() as db:
+        for uid, payout in payouts.items():
+            await db.execute(
+                "UPDATE baccarat_bets SET payout=? WHERE round_id=? AND user_id=?",
+                (payout, round_id, uid),
+            )
+            if payout > 0:
+                await db.execute(
+                    "UPDATE users SET points=points+? WHERE user_id=?", (payout, uid)
+                )
+                await db.execute(
+                    "INSERT INTO log(user_id,delta,reason,memo,created_at) VALUES(?,?,?,?,?)",
+                    (uid, payout, "baccarat_win", f"round#{round_id}", now_kst()),
+                )
+        await db.commit()
+
+
+async def baccarat_get_history(limit: int = 100):
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT * FROM baccarat_rounds WHERE status='done' AND result IS NOT NULL ORDER BY id DESC LIMIT ?",
+            (limit,),
+        )
+        rows = await cur.fetchall()
+        return list(reversed(rows))
+
+
+async def baccarat_get_recent_rounds(limit: int = 20):
+    async with get_db() as db:
+        cur = await db.execute(
+            """SELECT r.id, r.result, r.done_at,
+                      COALESCE(SUM(b.amount),0) as total_bet,
+                      COUNT(b.id) as bet_count
+               FROM baccarat_rounds r
+               LEFT JOIN baccarat_bets b ON b.round_id=r.id
+               WHERE r.status='done'
+               GROUP BY r.id ORDER BY r.id DESC LIMIT ?""",
+            (limit,),
+        )
+        return await cur.fetchall()
 
 
 async def list_users(search: str = "", limit: int = 50, offset: int = 0):

@@ -214,6 +214,35 @@ async def logs_page(request: Request, reason: str = ""):
     })
 
 
+# ── baccarat config ────────────────────────────────────────────────────────
+
+@app.get("/baccarat", response_class=HTMLResponse)
+async def baccarat_page(request: Request):
+    if not check_session(request):
+        return RedirectResponse("/login", status_code=303)
+    cfg = await db.get_config_raw()
+    rounds = await db.baccarat_get_recent_rounds(limit=20)
+    return templates.TemplateResponse("panel.html", {
+        "request": request, "page": "baccarat",
+        "bac_min_bet": int(cfg.get("baccarat_min_bet", "100")),
+        "bac_max_bet": int(cfg.get("baccarat_max_bet", "0")),
+        "rounds": [dict(r) for r in rounds],
+    })
+
+
+@app.post("/baccarat")
+async def baccarat_save(request: Request):
+    if not check_session(request):
+        raise HTTPException(status_code=401)
+    form = await request.form()
+    def _int(v, default=0):
+        try: return max(0, int(v))
+        except: return default
+    await db.set_config("baccarat_min_bet", str(_int(form.get("baccarat_min_bet", "100"), 100)))
+    await db.set_config("baccarat_max_bet", str(_int(form.get("baccarat_max_bet", "0"), 0)))
+    return RedirectResponse("/baccarat", status_code=303)
+
+
 # ── run ────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

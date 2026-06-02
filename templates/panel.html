@@ -268,6 +268,9 @@ input:checked+.slider::before{transform:translateX(20px)}
       <a href="/logs" class="nav-item {% if page=='logs' %}active{% endif %}">
         <span class="icon">📜</span> 로그
       </a>
+      <a href="/baccarat" class="nav-item {% if page=='baccarat' %}active{% endif %}">
+        <span class="icon">🎲</span> 바카라
+      </a>
     </nav>
     <div class="sidebar-footer">
       <a href="/logout">🚪 로그아웃</a>
@@ -565,6 +568,49 @@ input:checked+.slider::before{transform:translateX(20px)}
           </tr>
           {% else %}
           <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">로그 없음</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% elif page == "baccarat" %}
+    <div class="page-title">🎲 바카라 설정</div>
+    <div class="card">
+      <form method="post" action="/baccarat">
+        <div class="form-group">
+          <label>최소 베팅 (🥕당근, 0=제한없음)</label>
+          <input type="number" name="baccarat_min_bet" value="{{ bac_min_bet }}" min="0" style="max-width:200px">
+        </div>
+        <div class="form-group">
+          <label>최대 베팅 (🥕당근, 0=무제한)</label>
+          <input type="number" name="baccarat_max_bet" value="{{ bac_max_bet }}" min="0" style="max-width:200px">
+        </div>
+        <div style="color:var(--muted);font-size:0.85rem;margin-bottom:16px">
+          배당: 🔴 플레이어 2배 · 🟢 타이 6배 · 🔵 뱅커 1.95배
+        </div>
+        <button type="submit" class="btn btn-primary">💾 저장</button>
+      </form>
+    </div>
+
+    <div class="page-title" style="margin-top:24px">📋 최근 회차</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>회차</th><th>결과</th><th>총 베팅</th><th>참여</th><th>종료시각</th></tr></thead>
+        <tbody>
+          {% for r in rounds %}
+          <tr>
+            <td class="mono" style="color:var(--muted)">{{ r.id }}</td>
+            <td>
+              {% if r.result == 'player' %}<span style="color:#e05555">🔴 플레이어</span>
+              {% elif r.result == 'banker' %}<span style="color:#5588ee">🔵 뱅커</span>
+              {% elif r.result == 'tie' %}<span style="color:#44bb66">🟢 타이</span>
+              {% else %}<span style="color:var(--muted)">—</span>{% endif %}
+            </td>
+            <td class="mono">{{ "{:,}".format(r.total_bet) }} 🥕</td>
+            <td>{{ r.bet_count }}명</td>
+            <td style="color:var(--muted);font-size:0.78rem">{{ r.done_at[:16] if r.done_at else '—' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">기록 없음</td></tr>
           {% endfor %}
         </tbody>
       </table>
