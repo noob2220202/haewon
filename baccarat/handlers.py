@@ -1,33 +1,25 @@
-"""바카라봇 핸들러 및 FSM."""
+"""바카라봇 핸들러."""
 
 import asyncio
 import logging
 import os
-import sys
 import re
+import sys
 
 from aiogram import Router, F, Bot
 from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import (
     Message, CallbackQuery,
     InlineKeyboardMarkup, InlineKeyboardButton,
 )
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import db
 from . import formats as fmt
 from . import scheduler
 
 log = logging.getLogger(__name__)
 router = Router()
-
-BACCARAT_GROUP_ID = int(os.environ.get("BACCARAT_GROUP_ID", "0"))
-
-
-class BetFlow(StatesGroup):
-    waiting_amount = State()
 
 
 async def _delete_after(bot: Bot, chat_id: int, msg_id: int, delay: int = 5):
@@ -45,76 +37,109 @@ async def _reply_del(message: Message, bot: Bot, text: str, delay: int = 5) -> M
     return sent
 
 
-# ── /베팅 ─────────────────────────────────────────────────────────────────
+# ── /베팅 <금액> ──────────────────────────────────────────────────────────
 
 @router.message(Command("베팅"))
-async def cmd_bet(message: Message, state: FSMContext, bot: Bot):
+async def cmd_bet(message: Message, bot: Bot):
     if message.chat.type == "private":
         await _reply_del(message, bot, "❌ 그룹 채팅에서만 사용할 수 있어요.")
         return
 
+    # 금액 파싱
+    args = (message.text or "").split()[1:]
+    if not args:
+        await _reply_del(message, bot, "사용법: <b>/베팅 1000</b>", delay=7)
+        return
+
+    raw = args[0].replace(",", "").replace("🥕", "")
+    if not raw.isdigit():
+        await _reply_del(message, bot, fmt.bet_error("숫자로 금액을 입력하세요. 예) /베팅 1000"))
+        return
+
+    amount = int(raw)
+
+    cfg_raw = await db.get_config_raw()
+    min_bet = int(cfg_raw.get("baccarat_min_bet", "100"))
+    max_bet = int(cfg_raw.get("baccarat_max_bet", "0"))
+
+    if amount < min_bet:
+        await _reply_del(message, bot, fmt.bet_error(f"최소 베팅 금액은 <b>{min_bet:,}🥕</b>입니다."))
+        return
+    if max_bet > 0 and amount > max_bet:
+        await _reply_del(message, bot, fmt.bet_error(f"최대 베팅 금액은 <b>{max_bet:,}🥕</b>입니다."))
+        return
+
     await db.upsert_user(message.from_user.id, message.from_user.username)
 
-    # 현재 활성 회차 확인
-    round_row = await db.baccarat_get_active_round()
+    user_row = await db.get_user(message.from_user.id)
+    balance = user_row["points"] if user_row else 0
+    if amount > balance:
+        await _reply_del(message, bot, fmt.bet_error(f"잔액 부족. 현재 잔액: <b>{balance:,}🥕</b>"))
+        return
 
+    # 활성 회차 확인 (없으면 게임 시작)
+    round_row = await db.baccarat_get_active_round()
     if not round_row:
-        # 게임이 idle 상태 → 시작
         await scheduler.start_game(bot, message.chat.id)
-        await asyncio.sleep(0.2)
+        await asyncio.sleep(0.3)
         round_row = await db.baccarat_get_active_round()
 
     if not round_row:
-        await _reply_del(message, bot, "❌ 베팅 회차를 시작하지 못했어요. 잠시 후 다시 시도해주세요.")
+        await _reply_del(message, bot, "❌ 회차를 시작하지 못했어요. 잠시 후 다시 시도해주세요.")
         return
 
-    # 이미 베팅했는지 확인
+    # 이미 베팅했으면 안내
     existing = await db.baccarat_get_user_bet(round_row["id"], message.from_user.id)
     if existing:
-        side_kor = {"player": "플레이어", "banker": "뱅커", "tie": "타이"}[existing["side"]]
-        await _reply_del(message, bot, f"이미 <b>{side_kor}</b>에 <b>{existing['amount']:,}🥕</b> 베팅하셨어요!")
+        kor = {"player": "플레이어", "banker": "뱅커", "tie": "타이"}[existing["side"]]
+        await _reply_del(message, bot, f"이미 <b>{kor}</b>에 <b>{existing['amount']:,}🥕</b> 베팅하셨어요!")
         return
-
-    # 기존 FSM 상태 초기화
-    await state.clear()
 
     uid = message.from_user.id
     round_id = round_row["id"]
 
+    # 금액을 callback_data에 인코딩 → 버튼 클릭만으로 즉시 베팅
     kb = InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="🔵 플레이어  ×2.0",  callback_data=f"bet_player_{uid}_{round_id}"),
-        InlineKeyboardButton(text="🟢 타이  ×6.0",      callback_data=f"bet_tie_{uid}_{round_id}"),
-        InlineKeyboardButton(text="🔴 뱅커  ×1.95",     callback_data=f"bet_banker_{uid}_{round_id}"),
+        InlineKeyboardButton(
+            text=f"🔵 플레이어  ×2.0",
+            callback_data=f"bv2_{uid}_{round_id}_{amount}_player",
+        ),
+        InlineKeyboardButton(
+            text=f"🟢 타이  ×6.0",
+            callback_data=f"bv2_{uid}_{round_id}_{amount}_tie",
+        ),
+        InlineKeyboardButton(
+            text=f"🔴 뱅커  ×1.95",
+            callback_data=f"bv2_{uid}_{round_id}_{amount}_banker",
+        ),
     ]])
 
-    sent = await message.reply(fmt.bet_select_prompt(), reply_markup=kb)
-    await state.update_data(
-        prompt_msg_id=sent.message_id,
-        cmd_msg_id=message.message_id,
-        round_id=round_id,
-        chat_id=message.chat.id,
+    sent = await message.reply(
+        fmt.bet_select_prompt(amount, balance),
+        reply_markup=kb,
+        parse_mode="HTML",
     )
-
-    # 30초 후 메시지 + 명령어 자동 삭제 (FSM 타임아웃 역할도 겸함)
+    # 30초 후 버튼 메시지 자동 삭제
     asyncio.create_task(_delete_after(bot, message.chat.id, sent.message_id, 30))
     asyncio.create_task(_delete_after(bot, message.chat.id, message.message_id, 5))
 
 
-# ── 사이드 선택 콜백 ──────────────────────────────────────────────────────
+# ── 사이드 선택 콜백 (즉시 베팅) ─────────────────────────────────────────
 
-_BET_PATTERN = re.compile(r"^bet_(player|tie|banker)_(\d+)_(\d+)$")
+_BET_V2 = re.compile(r"^bv2_(\d+)_(\d+)_(\d+)_(player|tie|banker)$")
 
 
-@router.callback_query(F.data.regexp(_BET_PATTERN))
-async def cb_select_side(cb: CallbackQuery, state: FSMContext, bot: Bot):
-    m = _BET_PATTERN.match(cb.data)
-    side, owner_id, round_id = m.group(1), int(m.group(2)), int(m.group(3))
+@router.callback_query(F.data.regexp(_BET_V2))
+async def cb_place_bet(cb: CallbackQuery, bot: Bot):
+    m = _BET_V2.match(cb.data)
+    owner_id, round_id, amount, side = int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4)
 
+    # 본인 확인
     if cb.from_user.id != owner_id:
         await cb.answer("본인만 사용 가능합니다 🚫", show_alert=True)
         return
 
-    # 회차 상태 재확인
+    # 회차 상태 확인
     round_row = await db.baccarat_get_round(round_id)
     if not round_row or round_row["status"] != "betting":
         await cb.answer("베팅 기간이 종료됐어요 ⛔", show_alert=True)
@@ -122,10 +147,9 @@ async def cb_select_side(cb: CallbackQuery, state: FSMContext, bot: Bot):
             await cb.message.delete()
         except Exception:
             pass
-        await state.clear()
         return
 
-    # 이미 베팅 여부 재확인
+    # 중복 베팅 확인
     existing = await db.baccarat_get_user_bet(round_id, cb.from_user.id)
     if existing:
         await cb.answer("이미 베팅하셨어요!", show_alert=True)
@@ -133,101 +157,34 @@ async def cb_select_side(cb: CallbackQuery, state: FSMContext, bot: Bot):
             await cb.message.delete()
         except Exception:
             pass
-        await state.clear()
         return
 
-    balance = 0
+    # 잔액 재확인
     user_row = await db.get_user(cb.from_user.id)
-    if user_row:
-        balance = user_row["points"]
-
-    await state.update_data(selected_side=side, round_id=round_id, chat_id=cb.message.chat.id)
-    await state.set_state(BetFlow.waiting_amount)
-
-    await cb.message.edit_text(
-        fmt.bet_side_selected(side, balance),
-        parse_mode="HTML",
-    )
-    await cb.answer()
-
-
-# ── 금액 입력 ─────────────────────────────────────────────────────────────
-
-@router.message(BetFlow.waiting_amount, F.text)
-async def receive_amount(message: Message, state: FSMContext, bot: Bot):
-    data = await state.get_data()
-    chat_id = data.get("chat_id", message.chat.id)
-    round_id = data.get("round_id")
-
-    # 회차 상태 재확인
-    round_row = await db.baccarat_get_round(round_id) if round_id else None
-    if not round_row or round_row["status"] != "betting":
-        await state.clear()
-        sent = await message.reply("❌ 베팅 기간이 종료됐어요.")
-        asyncio.create_task(_delete_after(bot, chat_id, sent.message_id, 5))
-        asyncio.create_task(_delete_after(bot, chat_id, message.message_id, 5))
-        return
-
-    # 금액 파싱
-    raw = message.text.strip().replace(",", "").replace("🥕", "")
-    if not raw.isdigit():
-        sent = await message.reply(fmt.bet_error("숫자를 입력해주세요. (예: 1000)"))
-        asyncio.create_task(_delete_after(bot, chat_id, sent.message_id, 5))
-        asyncio.create_task(_delete_after(bot, chat_id, message.message_id, 5))
-        return
-
-    amount = int(raw)
-
-    # 설정값 가져오기
-    cfg_raw = await db.get_config_raw()
-    min_bet = int(cfg_raw.get("baccarat_min_bet", "100"))
-    max_bet = int(cfg_raw.get("baccarat_max_bet", "0"))
-
-    if amount < min_bet:
-        sent = await message.reply(fmt.bet_error(f"최소 베팅 금액은 <b>{min_bet:,}🥕</b>입니다."), parse_mode="HTML")
-        asyncio.create_task(_delete_after(bot, chat_id, sent.message_id, 5))
-        asyncio.create_task(_delete_after(bot, chat_id, message.message_id, 5))
-        return
-
-    if max_bet > 0 and amount > max_bet:
-        sent = await message.reply(fmt.bet_error(f"최대 베팅 금액은 <b>{max_bet:,}🥕</b>입니다."), parse_mode="HTML")
-        asyncio.create_task(_delete_after(bot, chat_id, sent.message_id, 5))
-        asyncio.create_task(_delete_after(bot, chat_id, message.message_id, 5))
-        return
-
-    user_row = await db.get_user(message.from_user.id)
     balance = user_row["points"] if user_row else 0
-
     if amount > balance:
-        sent = await message.reply(fmt.bet_error(f"잔액이 부족해요. 현재 잔액: <b>{balance:,}🥕</b>"), parse_mode="HTML")
-        asyncio.create_task(_delete_after(bot, chat_id, sent.message_id, 5))
-        asyncio.create_task(_delete_after(bot, chat_id, message.message_id, 5))
+        await cb.answer(f"잔액 부족 ({balance:,}🥕)", show_alert=True)
         return
 
-    side = data["selected_side"]
-
-    # 포인트 차감 먼저 (실패 시 중단)
-    await db.add_points(message.from_user.id, -amount, "baccarat_bet", f"round#{round_id}")
-
-    # 베팅 등록
-    ok = await db.baccarat_place_bet(round_id, message.from_user.id, side, amount)
+    # 포인트 차감 + 베팅 등록
+    await db.add_points(cb.from_user.id, -amount, "baccarat_bet", f"round#{round_id}")
+    ok = await db.baccarat_place_bet(round_id, cb.from_user.id, side, amount)
     if not ok:
-        # 중복 베팅 → 포인트 환불
-        await db.add_points(message.from_user.id, amount, "baccarat_refund", f"duplicate round#{round_id}")
-        sent = await message.reply("❌ 이미 베팅하셨거나 오류가 발생했어요.")
-        asyncio.create_task(_delete_after(bot, chat_id, sent.message_id, 5))
-        asyncio.create_task(_delete_after(bot, chat_id, message.message_id, 5))
-        await state.clear()
+        # 중복 race condition → 환불
+        await db.add_points(cb.from_user.id, amount, "baccarat_refund", f"dup round#{round_id}")
+        await cb.answer("이미 베팅하셨거나 오류가 발생했어요.", show_alert=True)
+        try:
+            await cb.message.delete()
+        except Exception:
+            pass
         return
 
-    await state.clear()
-
-    # 성공 응답
-    sent = await message.reply(fmt.bet_success(side, amount), parse_mode="HTML")
-    asyncio.create_task(_delete_after(bot, chat_id, sent.message_id, 5))
-    asyncio.create_task(_delete_after(bot, chat_id, message.message_id, 5))
+    # 성공: 메시지 교체 후 5초 뒤 삭제
+    await cb.message.edit_text(fmt.bet_success(side, amount), parse_mode="HTML")
+    asyncio.create_task(_delete_after(bot, cb.message.chat.id, cb.message.message_id, 5))
+    await cb.answer()
 
     # 핀 캡션 업데이트
     asyncio.create_task(
-        scheduler.update_pin_after_bet(bot, chat_id, round_id)
+        scheduler.update_pin_after_bet(bot, cb.message.chat.id, round_id)
     )

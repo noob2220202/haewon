@@ -100,8 +100,11 @@ def idle_notice() -> str:
     )
 
 
-def bet_select_prompt() -> str:
-    return "베팅할 곳을 선택하세요:"
+def bet_select_prompt(amount: int, balance: int) -> str:
+    return (
+        f"베팅 금액: <b>{_fmt(amount)}🥕</b>  |  잔액: <b>{_fmt(balance)}🥕</b>\n"
+        f"베팅할 곳을 선택하세요:"
+    )
 
 
 def bet_side_selected(side: str, balance: int) -> str:
