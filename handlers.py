@@ -126,8 +126,6 @@ async def cmd_myinfo(message: Message, bot: Bot):
     if user is None:
         sent = await message.answer("아직 채팅 기록이 없어요!", parse_mode="HTML")
     else:
-        if not is_admin:
-            await db.add_points(uid, -5, "info_view", "/내정보 조회")
         user = await db.get_user(uid)
         daily = await db.get_daily_count(uid)
         sent = await message.answer(
