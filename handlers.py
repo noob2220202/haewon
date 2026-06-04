@@ -369,28 +369,58 @@ async def _point_cmd(message: Message, bot: Bot, is_add: bool):
 
     await bot.delete_message(message.chat.id, message.message_id)
 
-    if not message.reply_to_message or not message.reply_to_message.from_user:
-        sent = await message.answer("❌ <i>대상의 메시지에 답장으로 사용해줘요</i>", parse_mode="HTML")
+    cmd = "/당근" if is_add else "/채찍"
+    args = message.text.split(maxsplit=3)
+
+    # 모드 1: /당근 @태그|유저ID 개수 [사유]
+    if len(args) >= 3 and (args[1].startswith("@") or args[1].isdigit()):
+        target_arg = args[1]
+        if not args[2].isdigit():
+            sent = await message.answer(f"❌ <i>사용법: {cmd} @태그/고번 개수 사유</i>", parse_mode="HTML")
+            asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+            return
+        amount = int(args[2])
+        memo = args[3] if len(args) >= 4 else ""
+
+        if target_arg.isdigit():
+            target_row = await db.get_user(int(target_arg))
+        else:
+            target_row = await db.get_user_by_username(target_arg.lstrip("@"))
+
+        if not target_row:
+            sent = await message.answer("❌ <i>유저를 찾을 수 없어요. 먼저 채팅방에서 대화한 유저만 조회됩니다.</i>", parse_mode="HTML")
+            asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+            return
+
+        target_id = target_row["user_id"]
+        target_username = target_row["username"]
+
+    # 모드 2: 답장 + /당근 개수 [사유]  (기존 방식)
+    elif message.reply_to_message and message.reply_to_message.from_user:
+        if len(args) < 2 or not args[1].isdigit():
+            sent = await message.answer(f"❌ <i>사용법: {cmd} 숫자 사유</i>", parse_mode="HTML")
+            asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+            return
+        amount = int(args[1])
+        memo = args[2] if len(args) >= 3 else ""
+        target = message.reply_to_message.from_user
+        await db.upsert_user(target.id, target.username)
+        target_id = target.id
+        target_username = target.username
+
+    else:
+        sent = await message.answer(
+            f"❌ <i>사용법:\n{cmd} @태그/고번 개수 사유\n또는 메시지에 답장 후 {cmd} 개수 사유</i>",
+            parse_mode="HTML",
+        )
         asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
         return
 
-    args = message.text.split(maxsplit=2)
-    if len(args) < 2 or not args[1].isdigit():
-        cmd = "/당근" if is_add else "/채찍"
-        sent = await message.answer(f"❌ <i>사용법: {cmd} 숫자 사유</i>", parse_mode="HTML")
-        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
-        return
-
-    amount = int(args[1])
-    memo = args[2] if len(args) >= 3 else ""
-    target = message.reply_to_message.from_user
     delta = amount if is_add else -amount
-
-    await db.upsert_user(target.id, target.username)
-    await db.add_points(target.id, delta, "admin_edit", memo)
+    await db.add_points(target_id, delta, "admin_edit", memo)
 
     sent = await message.answer(
-        formats.point_cmd_result(target.username, delta, memo),
+        formats.point_cmd_result(target_username, delta, memo),
         parse_mode="HTML",
     )
     asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
