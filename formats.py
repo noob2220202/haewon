@@ -108,6 +108,88 @@ def checkin_success(username: str | None, points: int) -> str:
     )
 
 
+def lotto_main(tickets: list, balance: int, price: int, jackpot: int, draw_id: int) -> str:
+    lines = [
+        f"<blockquote>🎰 <b>로또</b>  |  회차 #{draw_id}</blockquote>",
+        f"🏆 현재 잭팟: <b><u>{fmt_num(jackpot)}🥕</u></b>",
+        f"🎫 티켓 가격: <b>{fmt_num(price)}🥕</b>",
+        f"💰 보유 당근: <b>{fmt_num(balance)}🥕</b>",
+    ]
+    if tickets:
+        lines.append("")
+        lines.append(f"📋 <b>이번 회차 보유 티켓 ({len(tickets)}장)</b>")
+        for i, t in enumerate(tickets, 1):
+            import json as _j
+            nums = _j.loads(t["numbers"])
+            lines.append(f"  {i}. {' '.join(str(n) for n in nums)}")
+    else:
+        lines.append("\n<i>아직 구매한 티켓이 없어요</i>")
+    return "\n".join(lines)
+
+
+def lotto_select_prompt(selected: set, price: int, max_tickets: int, bought: int) -> str:
+    cnt = len(selected)
+    nums_str = " ".join(str(n) for n in sorted(selected)) if selected else "—"
+    remain = max_tickets - bought
+    return (
+        f"<blockquote>🎰 <b>번호 선택</b>  ({cnt}/5)</blockquote>\n"
+        f"선택: <b>{nums_str}</b>\n"
+        f"구매 가능 잔여: <b>{remain}장</b>  |  장당 <b>{fmt_num(price)}🥕</b>"
+    )
+
+
+def lotto_bought(numbers: list, balance: int, draw_id: int) -> str:
+    nums_str = "  ".join(str(n) for n in numbers)
+    return (
+        f"<blockquote>✅ <b>로또 구매 완료!</b></blockquote>\n"
+        f"🎫 번호: <b>{nums_str}</b>\n"
+        f"💰 잔여 당근: <b>{fmt_num(balance)}🥕</b>\n"
+        f"<i>추첨은 매일 자정에 진행됩니다 🌙</i>"
+    )
+
+
+def lotto_result(draw_id: int, winning: list, winners: dict, jackpot_total: int, carry: int) -> str:
+    nums_str = "  ".join(str(n) for n in winning)
+    lines = [
+        f"<blockquote>🎰 <b>로또 #{draw_id} 추첨 결과!</b></blockquote>",
+        f"🎯 당첨번호: <b>{nums_str}</b>",
+        "",
+    ]
+    if winners.get(5):
+        for w in winners[5]:
+            name = f"@{w['username']}" if w.get("username") else str(w["user_id"])
+            lines.append(f"🥇 <b>{name}</b>  5개 일치 → <b>+{fmt_num(w['payout'])}🥕</b>")
+    else:
+        lines.append(f"🥇 5개 일치 당첨자 없음 → 잭팟 <b>{fmt_num(carry)}🥕</b> 이월!")
+    if winners.get(4):
+        for w in winners[4]:
+            name = f"@{w['username']}" if w.get("username") else str(w["user_id"])
+            lines.append(f"🥈 <b>{name}</b>  4개 일치 → <b>+{fmt_num(w['payout'])}🥕</b>")
+    if winners.get(3):
+        for w in winners[3]:
+            name = f"@{w['username']}" if w.get("username") else str(w["user_id"])
+            lines.append(f"🥉 <b>{name}</b>  3개 일치 → <b>+{fmt_num(w['payout'])}🥕</b>")
+    if not winners.get(4) and not winners.get(3) and not winners.get(5):
+        lines.append("<i>이번 회차 당첨자 없음</i>")
+    return "\n".join(lines)
+
+
+def lotto_win_dm(grade: int, numbers: list, winning: list, payout: int, draw_id: int) -> str:
+    medal = {5: "🥇", 4: "🥈", 3: "🥉"}[grade]
+    my_nums = "  ".join(str(n) for n in numbers)
+    win_nums = "  ".join(str(n) for n in winning)
+    matched = sorted(set(numbers) & set(winning))
+    match_str = "  ".join(str(n) for n in matched)
+    return (
+        f"<blockquote>{medal} <b>로또 당첨!</b></blockquote>\n"
+        f"회차 #{draw_id}  |  {grade}개 일치\n\n"
+        f"내 번호:     <b>{my_nums}</b>\n"
+        f"당첨번호: <b>{win_nums}</b>\n"
+        f"일치:         <b>{match_str}</b>\n\n"
+        f"🥕 <b><u>+{fmt_num(payout)} 🥕</u></b> 지급됐어요 🎉"
+    )
+
+
 def checkin_already(username: str | None) -> str:
     name = f"@{username}" if username else "누군가"
     return (

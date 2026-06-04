@@ -1,6 +1,8 @@
 import asyncio
+import json
 import logging
 import random
+import re
 import time
 from aiogram import Router, F, Bot
 from aiogram.types import (
@@ -21,6 +23,7 @@ router = Router()
 _cooldown: dict[int, float] = {}      # user_id -> expire_ts
 _surprise: dict[int, bool] = {}       # msg_id   -> claimed
 _known_chat_id: int | None = None     # 마지막 그룹 chat_id (정산 공지용)
+_lotto_select: dict[int, set] = {}    # user_id -> 선택 중인 번호 set
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -434,3 +437,196 @@ async def cmd_carrot(message: Message, bot: Bot):
 @router.message(Command("채찍"))
 async def cmd_whip(message: Message, bot: Bot):
     await _point_cmd(message, bot, is_add=False)
+
+
+# ── /로또 ─────────────────────────────────────────────────────────────────────
+
+def _lotto_kb(uid: int, selected: set) -> InlineKeyboardMarkup:
+    rows = []
+    for row_start in range(1, 21, 5):
+        row = []
+        for n in range(row_start, row_start + 5):
+            label = f"✅{n}" if n in selected else str(n)
+            row.append(InlineKeyboardButton(text=label, callback_data=f"ltn_{uid}_{n}"))
+        rows.append(row)
+    cnt = len(selected)
+    go_text = f"넘어가기 ({cnt}/5)" if cnt < 5 else "✅ 넘어가기"
+    rows.append([InlineKeyboardButton(text=go_text, callback_data=f"ltg_{uid}")])
+    rows.append([InlineKeyboardButton(text="취소", callback_data=f"ltc_{uid}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+@router.message(Command("로또"))
+async def cmd_lotto(message: Message, bot: Bot):
+    if message.chat.type != "private":
+        try:
+            await bot.delete_message(message.chat.id, message.message_id)
+        except Exception:
+            pass
+        sent = await message.answer("❌ 로또는 개인 DM에서만 사용 가능합니다.")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, 5))
+        return
+
+    cfg = await get_cfg()
+    if not cfg["lotto_enabled"]:
+        await message.answer("❌ 로또가 비활성화되어 있습니다.")
+        return
+
+    uid = message.from_user.id
+    await db.upsert_user(uid, message.from_user.username)
+
+    draw = await db.lotto_get_or_create_open_draw()
+    tickets = await db.lotto_get_user_tickets(draw["id"], uid)
+    user = await db.get_user(uid)
+    balance = user["points"] if user else 0
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🎰 구매하기", callback_data=f"ltb_{uid}")
+    ]])
+    await message.answer(
+        formats.lotto_main(tickets, balance, cfg["lotto_price"], draw["jackpot"], draw["id"]),
+        reply_markup=kb,
+        parse_mode="HTML",
+    )
+
+
+_RE_LTB = re.compile(r"^ltb_(\d+)$")
+_RE_LTN = re.compile(r"^ltn_(\d+)_(\d+)$")
+_RE_LTG = re.compile(r"^ltg_(\d+)$")
+_RE_LTC = re.compile(r"^ltc_(\d+)$")
+
+
+@router.callback_query(F.data.regexp(_RE_LTB))
+async def cb_lotto_buy(cb: CallbackQuery, bot: Bot):
+    uid = int(_RE_LTB.match(cb.data).group(1))
+    if cb.from_user.id != uid:
+        await cb.answer("본인만 사용 가능합니다 🚫", show_alert=True)
+        return
+
+    cfg = await get_cfg()
+    if not cfg["lotto_enabled"]:
+        await cb.answer("로또가 비활성화되어 있습니다.", show_alert=True)
+        return
+
+    draw = await db.lotto_get_or_create_open_draw()
+    bought = await db.lotto_count_user_tickets(draw["id"], uid)
+    if bought >= cfg["lotto_max_per_draw"]:
+        await cb.answer(f"이번 회차 최대 {cfg['lotto_max_per_draw']}장까지 구매 가능합니다.", show_alert=True)
+        return
+
+    user = await db.get_user(uid)
+    balance = user["points"] if user else 0
+    if balance < cfg["lotto_price"]:
+        await cb.answer(f"당근이 부족합니다. (잔액: {balance:,}🥕)", show_alert=True)
+        return
+
+    _lotto_select[uid] = set()
+    await cb.message.edit_text(
+        formats.lotto_select_prompt(set(), cfg["lotto_price"], cfg["lotto_max_per_draw"], bought),
+        reply_markup=_lotto_kb(uid, set()),
+        parse_mode="HTML",
+    )
+    await cb.answer()
+
+
+@router.callback_query(F.data.regexp(_RE_LTN))
+async def cb_lotto_num(cb: CallbackQuery, bot: Bot):
+    m = _RE_LTN.match(cb.data)
+    uid, num = int(m.group(1)), int(m.group(2))
+    if cb.from_user.id != uid:
+        await cb.answer("본인만 사용 가능합니다 🚫", show_alert=True)
+        return
+
+    sel = _lotto_select.get(uid, set())
+    if num in sel:
+        sel.discard(num)
+    elif len(sel) < 5:
+        sel.add(num)
+    else:
+        await cb.answer("이미 5개 선택됐어요. 취소 후 다시 선택하거나 넘어가기를 눌러주세요.", show_alert=True)
+        return
+    _lotto_select[uid] = sel
+
+    cfg = await get_cfg()
+    draw = await db.lotto_get_or_create_open_draw()
+    bought = await db.lotto_count_user_tickets(draw["id"], uid)
+    try:
+        await cb.message.edit_text(
+            formats.lotto_select_prompt(sel, cfg["lotto_price"], cfg["lotto_max_per_draw"], bought),
+            reply_markup=_lotto_kb(uid, sel),
+            parse_mode="HTML",
+        )
+    except Exception:
+        pass
+    await cb.answer(f"{len(sel)}/5 선택")
+
+
+@router.callback_query(F.data.regexp(_RE_LTG))
+async def cb_lotto_go(cb: CallbackQuery, bot: Bot):
+    uid = int(_RE_LTG.match(cb.data).group(1))
+    if cb.from_user.id != uid:
+        await cb.answer("본인만 사용 가능합니다 🚫", show_alert=True)
+        return
+
+    sel = _lotto_select.get(uid)
+    if not sel or len(sel) != 5:
+        await cb.answer("번호 5개를 선택해주세요!", show_alert=True)
+        return
+
+    cfg = await get_cfg()
+    draw = await db.lotto_get_or_create_open_draw()
+    if not draw or draw["status"] != "open":
+        await cb.answer("현재 진행 중인 회차가 없습니다.", show_alert=True)
+        return
+
+    bought = await db.lotto_count_user_tickets(draw["id"], uid)
+    if bought >= cfg["lotto_max_per_draw"]:
+        await cb.answer(f"이번 회차 최대 {cfg['lotto_max_per_draw']}장까지 구매 가능합니다.", show_alert=True)
+        return
+
+    user = await db.get_user(uid)
+    balance = user["points"] if user else 0
+    price = cfg["lotto_price"]
+    if balance < price:
+        await cb.answer(f"당근이 부족합니다. (잔액: {balance:,}🥕)", show_alert=True)
+        return
+
+    sorted_nums = sorted(sel)
+    await db.add_points(uid, -price, "lotto_buy", f"draw#{draw['id']}")
+    await db.lotto_buy_ticket(draw["id"], uid, sorted_nums)
+    await db.lotto_add_pool(draw["id"], price)
+    _lotto_select.pop(uid, None)
+
+    await cb.message.edit_text(
+        formats.lotto_bought(sorted_nums, balance - price, draw["id"]),
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="🎰 한 장 더 구매", callback_data=f"ltb_{uid}")
+        ]]),
+        parse_mode="HTML",
+    )
+    await cb.answer("✅ 구매 완료!")
+
+
+@router.callback_query(F.data.regexp(_RE_LTC))
+async def cb_lotto_cancel(cb: CallbackQuery, bot: Bot):
+    uid = int(_RE_LTC.match(cb.data).group(1))
+    if cb.from_user.id != uid:
+        await cb.answer("본인만 사용 가능합니다 🚫", show_alert=True)
+        return
+
+    _lotto_select.pop(uid, None)
+    cfg = await get_cfg()
+    draw = await db.lotto_get_or_create_open_draw()
+    tickets = await db.lotto_get_user_tickets(draw["id"], uid)
+    user = await db.get_user(uid)
+    balance = user["points"] if user else 0
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="🎰 구매하기", callback_data=f"ltb_{uid}")
+    ]])
+    await cb.message.edit_text(
+        formats.lotto_main(tickets, balance, cfg["lotto_price"], draw["jackpot"], draw["id"]),
+        reply_markup=kb,
+        parse_mode="HTML",
+    )
+    await cb.answer()

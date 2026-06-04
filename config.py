@@ -26,6 +26,16 @@ async def get_cfg() -> dict:
             "msg_autodelete_sec": int(raw.get("msg_autodelete_sec", "5")),
             "checkin_enabled": raw.get("checkin_enabled", "true") == "true",
             "checkin_points": int(raw.get("checkin_points", "30")),
+            "lotto_enabled":       raw.get("lotto_enabled", "true") == "true",
+            "lotto_price":         int(raw.get("lotto_price", "1000")),
+            "lotto_max_per_draw":  int(raw.get("lotto_max_per_draw", "10")),
+            "lotto_prize_mode":    raw.get("lotto_prize_mode", "fixed"),
+            "lotto_prize_3_fixed": int(raw.get("lotto_prize_3_fixed", "500")),
+            "lotto_prize_4_fixed": int(raw.get("lotto_prize_4_fixed", "5000")),
+            "lotto_prize_5_fixed": int(raw.get("lotto_prize_5_fixed", "50000")),
+            "lotto_prize_3_pct":   int(raw.get("lotto_prize_3_pct", "5")),
+            "lotto_prize_4_pct":   int(raw.get("lotto_prize_4_pct", "15")),
+            "lotto_prize_5_pct":   int(raw.get("lotto_prize_5_pct", "80")),
         }
         _cache_ts = time.monotonic()
     return _cache

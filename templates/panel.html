@@ -271,6 +271,9 @@ input:checked+.slider::before{transform:translateX(20px)}
       <a href="/baccarat" class="nav-item {% if page=='baccarat' %}active{% endif %}">
         <span class="icon">🎲</span> 바카라
       </a>
+      <a href="/lotto" class="nav-item {% if page=='lotto' %}active{% endif %}">
+        <span class="icon">🎰</span> 로또
+      </a>
     </nav>
     <div class="sidebar-footer">
       <a href="/logout">🚪 로그아웃</a>
@@ -615,6 +618,83 @@ input:checked+.slider::before{transform:translateX(20px)}
         </tbody>
       </table>
     </div>
+    {% elif page == "lotto" %}
+    <div class="page-title">🎰 로또 설정</div>
+    <div class="card">
+      <form method="post" action="/lotto">
+        <div class="form-group">
+          <label class="toggle-label">
+            <input type="checkbox" name="lotto_enabled" {% if cfg.lotto_enabled %}checked{% endif %}>
+            <span>로또 기능 활성화</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>티켓 가격 (🥕당근)</label>
+          <input type="number" name="lotto_price" value="{{ cfg.lotto_price }}" min="1" style="max-width:200px">
+        </div>
+        <div class="form-group">
+          <label>회차당 최대 구매 장수</label>
+          <input type="number" name="lotto_max_per_draw" value="{{ cfg.lotto_max_per_draw }}" min="1" style="max-width:200px">
+        </div>
+        <div class="form-group">
+          <label>당첨금 모드</label>
+          <select name="lotto_prize_mode" style="max-width:200px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px">
+            <option value="fixed" {% if cfg.lotto_prize_mode == 'fixed' %}selected{% endif %}>고정값</option>
+            <option value="pool" {% if cfg.lotto_prize_mode == 'pool' %}selected{% endif %}>티켓 판매 비율</option>
+          </select>
+        </div>
+        <div style="color:var(--muted);font-size:0.85rem;margin-bottom:8px">고정값 모드: 1인당 지급액. 5개 고정값=0이면 잭팟 전액 분배.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+          <div class="form-group">
+            <label>3개 일치 (고정🥕 / 비율%)</label>
+            <input type="number" name="lotto_prize_3_fixed" value="{{ cfg.lotto_prize_3_fixed }}" min="0" placeholder="고정값">
+            <input type="number" name="lotto_prize_3_pct" value="{{ cfg.lotto_prize_3_pct }}" min="0" max="100" placeholder="비율%">
+          </div>
+          <div class="form-group">
+            <label>4개 일치 (고정🥕 / 비율%)</label>
+            <input type="number" name="lotto_prize_4_fixed" value="{{ cfg.lotto_prize_4_fixed }}" min="0" placeholder="고정값">
+            <input type="number" name="lotto_prize_4_pct" value="{{ cfg.lotto_prize_4_pct }}" min="0" max="100" placeholder="비율%">
+          </div>
+          <div class="form-group">
+            <label>5개 일치 잭팟 (고정🥕 / 비율%)</label>
+            <input type="number" name="lotto_prize_5_fixed" value="{{ cfg.lotto_prize_5_fixed }}" min="0" placeholder="고정값(0=전액)">
+            <input type="number" name="lotto_prize_5_pct" value="{{ cfg.lotto_prize_5_pct }}" min="0" max="100" placeholder="비율%">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">💾 저장</button>
+      </form>
+    </div>
+
+    {% if draw %}
+    <div class="page-title" style="margin-top:24px">📋 현재 진행 회차</div>
+    <div class="card" style="padding:16px">
+      <p>회차 #{{ draw.id }} | 날짜: {{ draw.draw_date }} | 잭팟: {{ "{:,}".format(draw.jackpot) }}🥕 | 판매: {{ "{:,}".format(draw.pool) }}🥕</p>
+    </div>
+    {% endif %}
+
+    <div class="page-title" style="margin-top:24px">📋 최근 추첨 내역</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>회차</th><th>날짜</th><th>당첨번호</th><th>티켓수</th><th>5개</th><th>4개</th><th>3개</th><th>잭팟</th></tr></thead>
+        <tbody>
+          {% for r in recent_draws %}
+          <tr>
+            <td class="mono" style="color:var(--muted)">#{{ r.id }}</td>
+            <td>{{ r.draw_date }}</td>
+            <td class="mono">{% if r.winning_nums %}{{ r.winning_nums }}{% else %}<span style="color:var(--muted)">추첨 전</span>{% endif %}</td>
+            <td>{{ r.ticket_count }}</td>
+            <td>{{ r.win5 }}</td>
+            <td>{{ r.win4 }}</td>
+            <td>{{ r.win3 }}</td>
+            <td class="mono">{{ "{:,}".format(r.jackpot) }}🥕</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">기록 없음</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
     {% endif %}
 
   </main>

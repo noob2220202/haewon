@@ -86,6 +86,7 @@ async def init_db():
             )
         await db.commit()
     await baccarat_init_tables()
+    await lotto_init_tables()
 
 
 # ── users ──────────────────────────────────────────────────────────────────
@@ -564,6 +565,191 @@ async def baccarat_get_recent_rounds(limit: int = 20):
                LEFT JOIN baccarat_bets b ON b.round_id=r.id
                WHERE r.status='done'
                GROUP BY r.id ORDER BY r.id DESC LIMIT ?""",
+            (limit,),
+        )
+        return await cur.fetchall()
+
+
+# ── lotto ──────────────────────────────────────────────────────────────────
+
+async def lotto_init_tables():
+    async with get_db() as db:
+        await db.executescript("""
+            CREATE TABLE IF NOT EXISTS lotto_draws (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                status       TEXT NOT NULL DEFAULT 'open',
+                draw_date    TEXT NOT NULL,
+                winning_nums TEXT DEFAULT NULL,
+                pool         INTEGER NOT NULL DEFAULT 0,
+                jackpot      INTEGER NOT NULL DEFAULT 0,
+                created_at   TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                drawn_at     TEXT DEFAULT NULL
+            );
+            CREATE TABLE IF NOT EXISTS lotto_tickets (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                draw_id      INTEGER NOT NULL REFERENCES lotto_draws(id),
+                user_id      INTEGER NOT NULL REFERENCES users(user_id),
+                numbers      TEXT NOT NULL,
+                matched      INTEGER DEFAULT NULL,
+                payout       INTEGER DEFAULT NULL,
+                purchased_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+            );
+        """)
+        lotto_defaults = {
+            "lotto_enabled":       "true",
+            "lotto_price":         "1000",
+            "lotto_max_per_draw":  "10",
+            "lotto_prize_mode":    "fixed",
+            "lotto_prize_3_fixed": "500",
+            "lotto_prize_4_fixed": "5000",
+            "lotto_prize_5_fixed": "50000",
+            "lotto_prize_3_pct":   "5",
+            "lotto_prize_4_pct":   "15",
+            "lotto_prize_5_pct":   "80",
+        }
+        for k, v in lotto_defaults.items():
+            await db.execute(
+                "INSERT OR IGNORE INTO config(key,value) VALUES(?,?)", (k, v)
+            )
+        await db.commit()
+
+
+async def lotto_get_open_draw():
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT * FROM lotto_draws WHERE status='open' ORDER BY id DESC LIMIT 1"
+        )
+        return await cur.fetchone()
+
+
+async def lotto_get_or_create_open_draw():
+    row = await lotto_get_open_draw()
+    if row:
+        return row
+    async with get_db() as db:
+        today = today_ymd()
+        cur = await db.execute(
+            "INSERT INTO lotto_draws(draw_date,created_at) VALUES(?,?) RETURNING id",
+            (today, now_kst()),
+        )
+        row = await cur.fetchone()
+        await db.commit()
+    return await lotto_get_draw(row["id"])
+
+
+async def lotto_get_draw(draw_id: int):
+    async with get_db() as db:
+        cur = await db.execute("SELECT * FROM lotto_draws WHERE id=?", (draw_id,))
+        return await cur.fetchone()
+
+
+async def lotto_buy_ticket(draw_id: int, user_id: int, numbers: list) -> int:
+    import json as _json
+    nums_json = _json.dumps(sorted(numbers))
+    async with get_db() as db:
+        cur = await db.execute(
+            "INSERT INTO lotto_tickets(draw_id,user_id,numbers,purchased_at) VALUES(?,?,?,?) RETURNING id",
+            (draw_id, user_id, nums_json, now_kst()),
+        )
+        row = await cur.fetchone()
+        await db.commit()
+        return row["id"]
+
+
+async def lotto_count_user_tickets(draw_id: int, user_id: int) -> int:
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT COUNT(*) FROM lotto_tickets WHERE draw_id=? AND user_id=?",
+            (draw_id, user_id),
+        )
+        row = await cur.fetchone()
+        return row[0]
+
+
+async def lotto_get_user_tickets(draw_id: int, user_id: int):
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT * FROM lotto_tickets WHERE draw_id=? AND user_id=? ORDER BY id",
+            (draw_id, user_id),
+        )
+        return await cur.fetchall()
+
+
+async def lotto_get_all_tickets(draw_id: int):
+    async with get_db() as db:
+        cur = await db.execute(
+            "SELECT t.*, u.username FROM lotto_tickets t JOIN users u ON t.user_id=u.user_id WHERE t.draw_id=?",
+            (draw_id,),
+        )
+        return await cur.fetchall()
+
+
+async def lotto_add_pool(draw_id: int, amount: int):
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE lotto_draws SET pool=pool+? WHERE id=?", (amount, draw_id)
+        )
+        await db.commit()
+
+
+async def lotto_finish_draw(draw_id: int, winning_nums: list):
+    import json as _json
+    async with get_db() as db:
+        await db.execute(
+            "UPDATE lotto_draws SET status='drawn', winning_nums=?, drawn_at=? WHERE id=?",
+            (_json.dumps(winning_nums), now_kst(), draw_id),
+        )
+        await db.commit()
+
+
+async def lotto_settle_tickets(draw_id: int, payouts: dict):
+    """payouts: {ticket_id: (matched, payout)}"""
+    async with get_db() as db:
+        for tid, (matched, payout) in payouts.items():
+            await db.execute(
+                "UPDATE lotto_tickets SET matched=?, payout=? WHERE id=?",
+                (matched, payout, tid),
+            )
+            if payout > 0:
+                cur = await db.execute(
+                    "SELECT user_id FROM lotto_tickets WHERE id=?", (tid,)
+                )
+                row = await cur.fetchone()
+                if row:
+                    uid = row["user_id"]
+                    await db.execute(
+                        "UPDATE users SET points=points+? WHERE user_id=?", (payout, uid)
+                    )
+                    await db.execute(
+                        "INSERT INTO log(user_id,delta,reason,memo,created_at) VALUES(?,?,?,?,?)",
+                        (uid, payout, "lotto_win", f"draw#{draw_id} {matched}match", now_kst()),
+                    )
+        await db.commit()
+
+
+async def lotto_open_next_draw(jackpot: int = 0) -> int:
+    async with get_db() as db:
+        today = today_ymd()
+        cur = await db.execute(
+            "INSERT INTO lotto_draws(draw_date,jackpot,created_at) VALUES(?,?,?) RETURNING id",
+            (today, jackpot, now_kst()),
+        )
+        row = await cur.fetchone()
+        await db.commit()
+        return row["id"]
+
+
+async def lotto_get_recent_draws(limit: int = 10):
+    async with get_db() as db:
+        cur = await db.execute(
+            """SELECT d.id, d.draw_date, d.status, d.winning_nums, d.pool, d.jackpot,
+                      COUNT(t.id) as ticket_count,
+                      COALESCE(SUM(CASE WHEN t.matched=5 THEN 1 ELSE 0 END),0) as win5,
+                      COALESCE(SUM(CASE WHEN t.matched=4 THEN 1 ELSE 0 END),0) as win4,
+                      COALESCE(SUM(CASE WHEN t.matched=3 THEN 1 ELSE 0 END),0) as win3
+               FROM lotto_draws d
+               LEFT JOIN lotto_tickets t ON t.draw_id=d.id
+               GROUP BY d.id ORDER BY d.id DESC LIMIT ?""",
             (limit,),
         )
         return await cur.fetchall()

@@ -243,6 +243,46 @@ async def baccarat_save(request: Request):
     return RedirectResponse("/baccarat", status_code=303)
 
 
+# ── lotto config ──────────────────────────────────────────────────────────
+
+@app.get("/lotto", response_class=HTMLResponse)
+async def lotto_page(request: Request):
+    if not check_session(request):
+        return RedirectResponse("/login", status_code=303)
+    cfg = await get_cfg()
+    draw = await db.lotto_get_open_draw()
+    recent = await db.lotto_get_recent_draws(limit=15)
+    return templates.TemplateResponse("panel.html", {
+        "request": request, "page": "lotto",
+        "cfg": cfg,
+        "draw": dict(draw) if draw else None,
+        "recent_draws": [dict(r) for r in recent],
+    })
+
+
+@app.post("/lotto")
+async def lotto_save(request: Request):
+    if not check_session(request):
+        raise HTTPException(status_code=401)
+    form = await request.form()
+    def _int(v, default=0):
+        try: return max(0, int(v))
+        except: return default
+    await save_cfg({
+        "lotto_enabled":       form.get("lotto_enabled") == "on",
+        "lotto_price":         _int(form.get("lotto_price"), 1000),
+        "lotto_max_per_draw":  _int(form.get("lotto_max_per_draw"), 10),
+        "lotto_prize_mode":    form.get("lotto_prize_mode", "fixed"),
+        "lotto_prize_3_fixed": _int(form.get("lotto_prize_3_fixed"), 500),
+        "lotto_prize_4_fixed": _int(form.get("lotto_prize_4_fixed"), 5000),
+        "lotto_prize_5_fixed": _int(form.get("lotto_prize_5_fixed"), 50000),
+        "lotto_prize_3_pct":   _int(form.get("lotto_prize_3_pct"), 5),
+        "lotto_prize_4_pct":   _int(form.get("lotto_prize_4_pct"), 15),
+        "lotto_prize_5_pct":   _int(form.get("lotto_prize_5_pct"), 80),
+    })
+    return RedirectResponse("/lotto", status_code=303)
+
+
 # ── run ────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
