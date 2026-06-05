@@ -15,6 +15,7 @@ import db
 import formats
 from config import get_cfg
 from db import set_config
+from formats import fmt_num
 
 log = logging.getLogger(__name__)
 router = Router()
@@ -607,8 +608,12 @@ async def cb_lotto_manual(cb: CallbackQuery, bot: Bot):
     await cb.answer()
 
 
+_RE_LTAQ = re.compile(r"^ltaq_(\d+)_(\d+)$")
+
+
 @router.callback_query(F.data.regexp(_RE_LTA))
 async def cb_lotto_auto(cb: CallbackQuery, bot: Bot):
+    """자동구매 수량 선택 화면"""
     uid = int(_RE_LTA.match(cb.data).group(1))
     if cb.from_user.id != uid:
         await cb.answer("본인만 사용 가능합니다 🚫", show_alert=True)
@@ -621,7 +626,8 @@ async def cb_lotto_auto(cb: CallbackQuery, bot: Bot):
         return
 
     bought = await db.lotto_count_user_tickets(draw["id"], uid)
-    if bought >= cfg["lotto_max_per_draw"]:
+    remain = cfg["lotto_max_per_draw"] - bought
+    if remain <= 0:
         await cb.answer(f"이번 회차 최대 {cfg['lotto_max_per_draw']}장까지 구매 가능합니다.", show_alert=True)
         return
 
@@ -632,21 +638,80 @@ async def cb_lotto_auto(cb: CallbackQuery, bot: Bot):
         await cb.answer(f"당근이 부족합니다. (잔액: {balance:,}🥕)", show_alert=True)
         return
 
-    sorted_nums = sorted(random.sample(range(1, 21), 5))
-    await db.add_points(uid, -price, "lotto_buy", f"draw#{draw['id']}")
-    await db.lotto_buy_ticket(draw["id"], uid, sorted_nums)
-    await db.lotto_add_pool(draw["id"], price)
+    max_afford = balance // price
+    can_buy = min(remain, max_afford)
+
+    candidates = [1, 3, 5, 10]
+    qty_row = [
+        InlineKeyboardButton(text=f"{n}장", callback_data=f"ltaq_{uid}_{n}")
+        for n in candidates if n <= can_buy
+    ]
+    if can_buy not in candidates and can_buy > 0:
+        qty_row.append(InlineKeyboardButton(text=f"최대 {can_buy}장", callback_data=f"ltaq_{uid}_{can_buy}"))
+    elif can_buy > 0 and can_buy == candidates[-1]:
+        qty_row.append(InlineKeyboardButton(text=f"최대 {can_buy}장", callback_data=f"ltaq_{uid}_{can_buy}"))
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🎰 한 장 더", callback_data=f"ltb_{uid}")],
-        [InlineKeyboardButton(text="◀ 처음으로", callback_data=f"ltc_{uid}")],
+        qty_row,
+        [InlineKeyboardButton(text="◀ 뒤로", callback_data=f"ltb_{uid}")],
     ])
     await cb.message.edit_text(
-        formats.lotto_bought(sorted_nums, balance - price, draw["id"]),
+        formats.lotto_auto_qty_menu(balance, price, remain),
         reply_markup=kb,
         parse_mode="HTML",
     )
-    await cb.answer("✅ 자동구매 완료!")
+    await cb.answer()
+
+
+@router.callback_query(F.data.regexp(_RE_LTAQ))
+async def cb_lotto_auto_qty(cb: CallbackQuery, bot: Bot):
+    """자동구매 N장 실행"""
+    m = _RE_LTAQ.match(cb.data)
+    uid, count = int(m.group(1)), int(m.group(2))
+    if cb.from_user.id != uid:
+        await cb.answer("본인만 사용 가능합니다 🚫", show_alert=True)
+        return
+
+    cfg = await get_cfg()
+    draw = await db.lotto_get_or_create_open_draw()
+    if not draw or draw["status"] != "open":
+        await cb.answer("현재 진행 중인 회차가 없습니다.", show_alert=True)
+        return
+
+    bought = await db.lotto_count_user_tickets(draw["id"], uid)
+    remain = cfg["lotto_max_per_draw"] - bought
+    price = cfg["lotto_price"]
+    user = await db.get_user(uid)
+    balance = user["points"] if user else 0
+
+    actual = min(count, remain, balance // price)
+    if actual <= 0:
+        await cb.answer("구매할 수 없습니다. (잔액 또는 한도 초과)", show_alert=True)
+        return
+
+    tickets_bought = []
+    for _ in range(actual):
+        nums = sorted(random.sample(range(1, 21), 5))
+        await db.add_points(uid, -price, "lotto_buy", f"draw#{draw['id']}")
+        await db.lotto_buy_ticket(draw["id"], uid, nums)
+        await db.lotto_add_pool(draw["id"], price)
+        tickets_bought.append(nums)
+
+    lines = [
+        f"<blockquote>✅ <b>자동구매 완료  {actual}장</b></blockquote>",
+        f"💰 잔여 당근: <b>{fmt_num(balance - price * actual)}🥕</b>",
+        "",
+    ]
+    for i, nums in enumerate(tickets_bought, 1):
+        lines.append(f"  {i}. <b>{' · '.join(str(n) for n in nums)}</b>")
+    lines.append("\n<i>추첨은 매일 자정에 진행됩니다 🌙</i>")
+
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎰 추가 구매", callback_data=f"ltb_{uid}")],
+        [InlineKeyboardButton(text="◀ 처음으로", callback_data=f"ltc_{uid}")],
+    ])
+    await cb.message.edit_text("\n".join(lines), reply_markup=kb, parse_mode="HTML")
+    await cb.answer(f"✅ {actual}장 구매 완료!")
 
 
 @router.callback_query(F.data.regexp(_RE_LTN))

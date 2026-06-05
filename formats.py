@@ -171,6 +171,16 @@ def lotto_buy_menu(balance: int, price: int, bought: int, max_tickets: int) -> s
     )
 
 
+def lotto_auto_qty_menu(balance: int, price: int, remain: int) -> str:
+    max_afford = balance // price
+    can_buy = min(remain, max_afford)
+    return (
+        f"<blockquote>🤖 <b>자동구매  |  수량 선택</b></blockquote>\n"
+        f"💰 잔액: <b>{fmt_num(balance)}🥕</b>  |  장당 <b>{fmt_num(price)}🥕</b>\n"
+        f"최대 구매 가능: <b>{can_buy}장</b>"
+    )
+
+
 def lotto_select_prompt(selected: set, price: int, max_tickets: int, bought: int) -> str:
     cnt = len(selected)
     nums_str = " ".join(str(n) for n in sorted(selected)) if selected else "—"
