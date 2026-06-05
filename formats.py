@@ -1,3 +1,6 @@
+import json
+
+
 def fmt_num(n: int) -> str:
     return f"{n:,}"
 
@@ -108,23 +111,64 @@ def checkin_success(username: str | None, points: int) -> str:
     )
 
 
-def lotto_main(tickets: list, balance: int, price: int, jackpot: int, draw_id: int) -> str:
-    lines = [
-        f"<blockquote>🎰 <b>로또</b>  |  회차 #{draw_id}</blockquote>",
-        f"🏆 현재 잭팟: <b><u>{fmt_num(jackpot)}🥕</u></b>",
-        f"🎫 티켓 가격: <b>{fmt_num(price)}🥕</b>",
-        f"💰 보유 당근: <b>{fmt_num(balance)}🥕</b>",
-    ]
-    if tickets:
-        lines.append("")
-        lines.append(f"📋 <b>이번 회차 보유 티켓 ({len(tickets)}장)</b>")
-        for i, t in enumerate(tickets, 1):
-            import json as _j
-            nums = _j.loads(t["numbers"])
-            lines.append(f"  {i}. {' '.join(str(n) for n in nums)}")
+def lotto_main(ticket_count: int, balance: int, price: int, jackpot: int, pool: int, draw_id: int) -> str:
+    total_prize = jackpot + pool
+    return (
+        f"<blockquote>🎰 <b>로또</b>  |  회차 #{draw_id}</blockquote>\n"
+        f"💰 보유 당근: <b>{fmt_num(balance)}🥕</b>\n"
+        f"🎫 보유 티켓: <b>{ticket_count}장</b>\n"
+        f"🏆 현재 당첨금: <b><u>{fmt_num(total_prize)}🥕</u></b>"
+    )
+
+
+def lotto_prize_info(jackpot: int, pool: int, price: int, mode: str,
+                     p3_fixed: int, p4_fixed: int, p5_fixed: int,
+                     p3_pct: int, p4_pct: int, p5_pct: int) -> str:
+    total = jackpot + pool
+    if mode == "pool":
+        prize5 = int(total * p5_pct / 100)
+        prize4 = int(pool * p4_pct / 100)
+        prize3 = int(pool * p3_pct / 100)
+        tier5 = f"{fmt_num(prize5)}🥕  ({p5_pct}%)"
+        tier4 = f"{fmt_num(prize4)}🥕  ({p4_pct}%)"
+        tier3 = f"{fmt_num(prize3)}🥕  ({p3_pct}%)"
     else:
-        lines.append("\n<i>아직 구매한 티켓이 없어요</i>")
+        tier5 = f"{fmt_num(p5_fixed if p5_fixed else total)}🥕" + (" (이월 전액)" if not p5_fixed else "")
+        tier4 = f"{fmt_num(p4_fixed)}🥕"
+        tier3 = f"{fmt_num(p3_fixed)}🥕"
+    tickets = pool // price if price else 0
+    return (
+        f"<blockquote>💰 <b>당첨금 현황</b></blockquote>\n"
+        f"🎫 이번 회차 판매: <b>{fmt_num(pool)}🥕</b>  ({tickets}장)\n"
+        f"🔄 이월 잭팟: <b>{fmt_num(jackpot)}🥕</b>\n"
+        f"🏆 총 당첨금 풀: <b><u>{fmt_num(total)}🥕</u></b>\n"
+        f"━━━━━━━━━\n"
+        f"🥇 1등 (5개): <b>{tier5}</b>\n"
+        f"🥈 2등 (4개): <b>{tier4}</b>\n"
+        f"🥉 3등 (3개): <b>{tier3}</b>"
+    )
+
+
+def lotto_my_tickets(tickets: list, draw_id: int) -> str:
+    if not tickets:
+        return (
+            f"<blockquote>🎫 <b>내 티켓  |  회차 #{draw_id}</b></blockquote>\n"
+            f"<i>아직 구매한 티켓이 없어요</i>"
+        )
+    lines = [f"<blockquote>🎫 <b>내 티켓  |  회차 #{draw_id}  ({len(tickets)}장)</b></blockquote>"]
+    for i, t in enumerate(tickets, 1):
+        nums = json.loads(t["numbers"])
+        lines.append(f"  {i}. <b>{' · '.join(str(n) for n in nums)}</b>")
     return "\n".join(lines)
+
+
+def lotto_buy_menu(balance: int, price: int, bought: int, max_tickets: int) -> str:
+    remain = max_tickets - bought
+    return (
+        f"<blockquote>🎰 <b>구매 방식 선택</b></blockquote>\n"
+        f"💰 잔액: <b>{fmt_num(balance)}🥕</b>  |  장당 <b>{fmt_num(price)}🥕</b>\n"
+        f"구매 가능 잔여: <b>{remain}장</b>"
+    )
 
 
 def lotto_select_prompt(selected: set, price: int, max_tickets: int, bought: int) -> str:
