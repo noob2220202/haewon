@@ -34,9 +34,9 @@ def pin_caption(round_no: int, totals: dict, status: str = "betting", remain_sec
         f"🎲 바카라  |  제 <b>{round_no}</b>회차  |  {status_str}\n"
         f"━━━━━━━━━━━━━━━\n"
         f"📊 베팅 현황\n"
-        f"🔵 플레이어: <b>{_fmt(p_amt)}🥕</b> ({p_cnt}명)\n"
-        f"🟢 타이: <b>{_fmt(t_amt)}🥕</b> ({t_cnt}명)\n"
-        f"🔴 뱅커: <b>{_fmt(b_amt)}🥕</b> ({b_cnt}명)\n"
+        f"🔵 플레이어: <b>{_fmt(p_amt)}🍎</b> ({p_cnt}명)\n"
+        f"🟢 타이: <b>{_fmt(t_amt)}🍎</b> ({t_cnt}명)\n"
+        f"🔴 뱅커: <b>{_fmt(b_amt)}🍎</b> ({b_cnt}명)\n"
         f"━━━━━━━━━━━━━━━\n"
         f"💡 /베팅 [금액] → 버튼 선택"
     )
@@ -57,9 +57,9 @@ def betting_closed(round_no: int, totals: dict) -> str:
     return (
         f"🔒 <b>제 {round_no}회차 베팅 마감!</b>\n"
         f"10초 후 주사위를 굴립니다.\n\n"
-        f"🔵 플레이어: <b>{_fmt(p_amt)}🥕</b> ({p_cnt}명)\n"
-        f"🟢 타이: <b>{_fmt(t_amt)}🥕</b> ({t_cnt}명)\n"
-        f"🔴 뱅커: <b>{_fmt(b_amt)}🥕</b> ({b_cnt}명)"
+        f"🔵 플레이어: <b>{_fmt(p_amt)}🍎</b> ({p_cnt}명)\n"
+        f"🟢 타이: <b>{_fmt(t_amt)}🍎</b> ({t_cnt}명)\n"
+        f"🔴 뱅커: <b>{_fmt(b_amt)}🍎</b> ({b_cnt}명)"
     )
 
 
@@ -90,9 +90,9 @@ def round_result(round_no: int, p_dice: list, b_dice: list, result: str, bets: l
         for bet, payout in paid:
             name = bet["username"] or str(bet["user_id"])
             if result == "tie" and bet["side"] != "tie":
-                lines.append(f"🔄 <b>{name}</b>  {_fmt(bet['amount'])}🥕 → <b>{_fmt(payout)}🥕</b> (반환)")
+                lines.append(f"🔄 <b>{name}</b>  {_fmt(bet['amount'])}🍎 → <b>{_fmt(payout)}🍎</b> (반환)")
             else:
-                lines.append(f"🏷 <b>{name}</b>  {_fmt(bet['amount'])}🥕 → <b>{_fmt(payout)}🥕</b>")
+                lines.append(f"🏷 <b>{name}</b>  {_fmt(bet['amount'])}🍎 → <b>{_fmt(payout)}🍎</b>")
 
     return "\n".join(lines)
 
@@ -106,7 +106,7 @@ def idle_notice() -> str:
 
 def bet_select_prompt(amount: int, balance: int) -> str:
     return (
-        f"베팅 금액: <b>{_fmt(amount)}🥕</b>  |  잔액: <b>{_fmt(balance)}🥕</b>\n"
+        f"베팅 금액: <b>{_fmt(amount)}🍎</b>  |  잔액: <b>{_fmt(balance)}🍎</b>\n"
         f"베팅할 곳을 선택하세요:"
     )
 
@@ -116,7 +116,7 @@ def bet_side_selected(side: str, balance: int) -> str:
     emoji = {"player": "🔵", "banker": "🔴", "tie": "🟢"}[side]
     return (
         f"{emoji} <b>{kor}</b> 선택됨\n"
-        f"잔액: <b>{_fmt(balance)}🥕</b>\n"
+        f"잔액: <b>{_fmt(balance)}🍎</b>\n"
         f"베팅 금액을 입력하세요:"
     )
 
@@ -124,7 +124,7 @@ def bet_side_selected(side: str, balance: int) -> str:
 def bet_success(side: str, amount: int) -> str:
     kor = {"player": "플레이어", "banker": "뱅커", "tie": "타이"}[side]
     emoji = {"player": "🔵", "banker": "🔴", "tie": "🟢"}[side]
-    return f"✅ {emoji} <b>{kor}</b>에 <b>{_fmt(amount)}🥕</b> 베팅 완료!"
+    return f"✅ {emoji} <b>{kor}</b>에 <b>{_fmt(amount)}🍎</b> 베팅 완료!"
 
 
 def bet_error(msg: str) -> str:

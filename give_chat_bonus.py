@@ -1,5 +1,5 @@
 """
-어제 상위 30명에게 채팅 횟수만큼 당근 추가 지급
+어제 상위 30명에게 채팅 횟수만큼 사과 추가 지급
 사용법: python3 give_chat_bonus.py
 날짜 지정: python3 give_chat_bonus.py 2026-05-26
 """
@@ -53,11 +53,11 @@ async def main():
                 "INSERT INTO log(user_id, delta, reason, memo, created_at) VALUES (?,?,?,?,?)",
                 (row["user_id"], pts, "admin_edit", f"채팅수 추가지급 ({ymd} {rank}등)", now),
             )
-            print(f"{rank:>3}. {name:<30} {row['chat_count']:>6,}회 → 🥕+{pts:,}")
+            print(f"{rank:>3}. {name:<30} {row['chat_count']:>6,}회 → 🍎+{pts:,}")
             total += pts
 
         await db.commit()
-        print(f"\n✅ {len(rows)}명 / 총 🥕{total:,} 지급 완료")
+        print(f"\n✅ {len(rows)}명 / 총 {total:,}🍎 지급 완료")
 
 
 asyncio.run(main())

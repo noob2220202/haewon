@@ -79,6 +79,7 @@ async def init_db():
             "msg_autodelete_sec": "5",
             "checkin_enabled": "true",
             "checkin_points": "30",
+            "baccarat_topic_id": "",
         }
         for k, v in defaults.items():
             await db.execute(
@@ -87,6 +88,23 @@ async def init_db():
         await db.commit()
     await baccarat_init_tables()
     await lotto_init_tables()
+
+
+async def reset_db():
+    """모든 테이블 삭제 후 재초기화."""
+    async with get_db() as db:
+        await db.executescript("""
+            DROP TABLE IF EXISTS users;
+            DROP TABLE IF EXISTS daily;
+            DROP TABLE IF EXISTS config;
+            DROP TABLE IF EXISTS admins;
+            DROP TABLE IF EXISTS log;
+            DROP TABLE IF EXISTS baccarat_rounds;
+            DROP TABLE IF EXISTS baccarat_bets;
+            DROP TABLE IF EXISTS lotto_draws;
+            DROP TABLE IF EXISTS lotto_tickets;
+        """)
+    await init_db()
 
 
 # ── users ──────────────────────────────────────────────────────────────────

@@ -13,8 +13,8 @@ def settle_page(all_rewarded: list, page: int, total_pages: int) -> str:
     for rank, row, pts in rows:
         name = f"@{row['username']}" if row["username"] else str(row["user_id"])
         chat = fmt_num(row["chat_count"])
-        lines.append(f"🥕 <b>{rank}.</b> {name}  {chat}회 → <b>+{fmt_num(pts)}</b>")
-    lines.append(f"\n<i>총 {fmt_num(len(all_rewarded))}명 당근 지급 완료 🎉</i>")
+        lines.append(f"🍎 <b>{rank}.</b> {name}  {chat}회 → <b>+{fmt_num(pts)}</b>")
+    lines.append(f"\n<i>총 {fmt_num(len(all_rewarded))}명 사과 지급 완료 🎉</i>")
     return "\n".join(lines)
 
 
@@ -25,7 +25,7 @@ def my_info(username: str | None, daily: int, total: int, points: int) -> str:
         f"🗣 <b>{name}</b>\n\n"
         f"✉️ <i>오늘 채팅</i>      <b>{fmt_num(daily)}</b>\n"
         f"📮 <i>누적 채팅</i>      <b>{fmt_num(total)}</b>\n\n"
-        f"🥕 <i>보유 당근</i>   <b><u>{fmt_num(points)} 🥕</u></b>"
+        f"🍎 <i>보유 사과</i>   <b><u>{fmt_num(points)} 🍎</u></b>"
     )
 
 
@@ -52,14 +52,14 @@ def rank_page(title: str, rows: list, page: int, total_pages: int, value_key: st
         else:
             lines.append(f"<b>{rank}.</b> {name}  —  {val}")
     if title.startswith("📅"):
-        lines.append("\n<i>🕛 자정에 1위부터 당근 차등 지급</i>")
+        lines.append("\n<i>🕛 자정에 1위부터 사과 차등 지급</i>")
     return "\n".join(lines)
 
 
 def surprise_appear(points: int) -> str:
     return (
         f"⚡️돌발 포인트!\n"
-        f"🥕 +{fmt_num(points)}"
+        f"🍎 +{fmt_num(points)}"
     )
 
 
@@ -68,7 +68,7 @@ def surprise_winner(username: str | None, points: int) -> str:
     return (
         f"<blockquote>🎉 <b>당첨!</b></blockquote>\n"
         f"🏷 <b>{name}</b> 님이\n"
-        f"🥕 <b><u>+{fmt_num(points)} 🥕</u></b> 획득 ⚡️"
+        f"🍎 <b><u>+{fmt_num(points)} 🍎</u></b> 획득 ⚡️"
     )
 
 
@@ -93,12 +93,12 @@ def group_only() -> str:
 def point_cmd_result(username: str | None, delta: int, memo: str) -> str:
     name = f"@{username}" if username else "유저"
     sign = "+" if delta >= 0 else ""
-    emoji = "🥕" if delta >= 0 else "🔴"
+    emoji = "🍎" if delta >= 0 else "🔴"
     reason = f"\n📝 <i>{memo}</i>" if memo else ""
     return (
-        f"<blockquote>{emoji} <b>당근 {'지급' if delta >= 0 else '차감'}</b></blockquote>\n"
+        f"<blockquote>{emoji} <b>사과 {'지급' if delta >= 0 else '차감'}</b></blockquote>\n"
         f"🏷 <b>{name}</b>\n"
-        f"🥕 <b><u>{sign}{fmt_num(delta)} 🥕</u></b>{reason}"
+        f"🍎 <b><u>{sign}{fmt_num(delta)} 🍎</u></b>{reason}"
     )
 
 
@@ -107,7 +107,7 @@ def checkin_success(username: str | None, points: int) -> str:
     return (
         f"<blockquote>✅ <b>출석 완료!</b></blockquote>\n"
         f"🏷 <b>{name}</b>\n"
-        f"🥕 <b><u>+{fmt_num(points)} 🥕</u></b> 지급됐어요 🎉"
+        f"🍎 <b><u>+{fmt_num(points)} 🍎</u></b> 지급됐어요 🎉"
     )
 
 
@@ -115,9 +115,9 @@ def lotto_main(ticket_count: int, balance: int, price: int, jackpot: int, pool: 
     total_prize = jackpot + pool
     return (
         f"<blockquote>🎰 <b>로또</b>  |  회차 #{draw_id}</blockquote>\n"
-        f"💰 보유 당근: <b>{fmt_num(balance)}🥕</b>\n"
+        f"💰 보유 사과: <b>{fmt_num(balance)}🍎</b>\n"
         f"🎫 보유 티켓: <b>{ticket_count}장</b>\n"
-        f"🏆 현재 당첨금: <b><u>{fmt_num(total_prize)}🥕</u></b>"
+        f"🏆 현재 당첨금: <b><u>{fmt_num(total_prize)}🍎</u></b>"
     )
 
 
@@ -129,19 +129,19 @@ def lotto_prize_info(jackpot: int, pool: int, price: int, mode: str,
         prize5 = int(total * p5_pct / 100)
         prize4 = int(pool * p4_pct / 100)
         prize3 = int(pool * p3_pct / 100)
-        tier5 = f"{fmt_num(prize5)}🥕  ({p5_pct}%)"
-        tier4 = f"{fmt_num(prize4)}🥕  ({p4_pct}%)"
-        tier3 = f"{fmt_num(prize3)}🥕  ({p3_pct}%)"
+        tier5 = f"{fmt_num(prize5)}🍎  ({p5_pct}%)"
+        tier4 = f"{fmt_num(prize4)}🍎  ({p4_pct}%)"
+        tier3 = f"{fmt_num(prize3)}🍎  ({p3_pct}%)"
     else:
-        tier5 = f"{fmt_num(p5_fixed if p5_fixed else total)}🥕" + (" (이월 전액)" if not p5_fixed else "")
-        tier4 = f"{fmt_num(p4_fixed)}🥕"
-        tier3 = f"{fmt_num(p3_fixed)}🥕"
+        tier5 = f"{fmt_num(p5_fixed if p5_fixed else total)}🍎" + (" (이월 전액)" if not p5_fixed else "")
+        tier4 = f"{fmt_num(p4_fixed)}🍎"
+        tier3 = f"{fmt_num(p3_fixed)}🍎"
     tickets = pool // price if price else 0
     return (
         f"<blockquote>💰 <b>당첨금 현황</b></blockquote>\n"
-        f"🎫 이번 회차 판매: <b>{fmt_num(pool)}🥕</b>  ({tickets}장)\n"
-        f"🔄 이월 잭팟: <b>{fmt_num(jackpot)}🥕</b>\n"
-        f"🏆 총 당첨금 풀: <b><u>{fmt_num(total)}🥕</u></b>\n"
+        f"🎫 이번 회차 판매: <b>{fmt_num(pool)}🍎</b>  ({tickets}장)\n"
+        f"🔄 이월 잭팟: <b>{fmt_num(jackpot)}🍎</b>\n"
+        f"🏆 총 당첨금 풀: <b><u>{fmt_num(total)}🍎</u></b>\n"
         f"━━━━━━━━━\n"
         f"🥇 1등 (5개): <b>{tier5}</b>\n"
         f"🥈 2등 (4개): <b>{tier4}</b>\n"
@@ -166,7 +166,7 @@ def lotto_buy_menu(balance: int, price: int, bought: int, max_tickets: int) -> s
     remain = max_tickets - bought
     return (
         f"<blockquote>🎰 <b>구매 방식 선택</b></blockquote>\n"
-        f"💰 잔액: <b>{fmt_num(balance)}🥕</b>  |  장당 <b>{fmt_num(price)}🥕</b>\n"
+        f"💰 잔액: <b>{fmt_num(balance)}🍎</b>  |  장당 <b>{fmt_num(price)}🍎</b>\n"
         f"구매 가능 잔여: <b>{remain}장</b>"
     )
 
@@ -176,7 +176,7 @@ def lotto_auto_qty_menu(balance: int, price: int, remain: int) -> str:
     can_buy = min(remain, max_afford)
     return (
         f"<blockquote>🤖 <b>자동구매  |  수량 선택</b></blockquote>\n"
-        f"💰 잔액: <b>{fmt_num(balance)}🥕</b>  |  장당 <b>{fmt_num(price)}🥕</b>\n"
+        f"💰 잔액: <b>{fmt_num(balance)}🍎</b>  |  장당 <b>{fmt_num(price)}🍎</b>\n"
         f"최대 구매 가능: <b>{can_buy}장</b>"
     )
 
@@ -188,7 +188,7 @@ def lotto_select_prompt(selected: set, price: int, max_tickets: int, bought: int
     return (
         f"<blockquote>🎰 <b>번호 선택</b>  ({cnt}/5)</blockquote>\n"
         f"선택: <b>{nums_str}</b>\n"
-        f"구매 가능 잔여: <b>{remain}장</b>  |  장당 <b>{fmt_num(price)}🥕</b>"
+        f"구매 가능 잔여: <b>{remain}장</b>  |  장당 <b>{fmt_num(price)}🍎</b>"
     )
 
 
@@ -197,7 +197,7 @@ def lotto_bought(numbers: list, balance: int, draw_id: int) -> str:
     return (
         f"<blockquote>✅ <b>로또 구매 완료!</b></blockquote>\n"
         f"🎫 번호: <b>{nums_str}</b>\n"
-        f"💰 잔여 당근: <b>{fmt_num(balance)}🥕</b>\n"
+        f"💰 잔여 사과: <b>{fmt_num(balance)}🍎</b>\n"
         f"<i>추첨은 매일 자정에 진행됩니다 🌙</i>"
     )
 
@@ -212,17 +212,17 @@ def lotto_result(draw_id: int, winning: list, winners: dict, jackpot_total: int,
     if winners.get(5):
         for w in winners[5]:
             name = f"@{w['username']}" if w.get("username") else str(w["user_id"])
-            lines.append(f"🥇 <b>{name}</b>  5개 일치 → <b>+{fmt_num(w['payout'])}🥕</b>")
+            lines.append(f"🥇 <b>{name}</b>  5개 일치 → <b>+{fmt_num(w['payout'])}🍎</b>")
     else:
-        lines.append(f"🥇 5개 일치 당첨자 없음 → 잭팟 <b>{fmt_num(carry)}🥕</b> 이월!")
+        lines.append(f"🥇 5개 일치 당첨자 없음 → 잭팟 <b>{fmt_num(carry)}🍎</b> 이월!")
     if winners.get(4):
         for w in winners[4]:
             name = f"@{w['username']}" if w.get("username") else str(w["user_id"])
-            lines.append(f"🥈 <b>{name}</b>  4개 일치 → <b>+{fmt_num(w['payout'])}🥕</b>")
+            lines.append(f"🥈 <b>{name}</b>  4개 일치 → <b>+{fmt_num(w['payout'])}🍎</b>")
     if winners.get(3):
         for w in winners[3]:
             name = f"@{w['username']}" if w.get("username") else str(w["user_id"])
-            lines.append(f"🥉 <b>{name}</b>  3개 일치 → <b>+{fmt_num(w['payout'])}🥕</b>")
+            lines.append(f"🥉 <b>{name}</b>  3개 일치 → <b>+{fmt_num(w['payout'])}🍎</b>")
     if not winners.get(4) and not winners.get(3) and not winners.get(5):
         lines.append("<i>이번 회차 당첨자 없음</i>")
     return "\n".join(lines)
@@ -240,7 +240,7 @@ def lotto_win_dm(grade: int, numbers: list, winning: list, payout: int, draw_id:
         f"내 번호:     <b>{my_nums}</b>\n"
         f"당첨번호: <b>{win_nums}</b>\n"
         f"일치:         <b>{match_str}</b>\n\n"
-        f"🥕 <b><u>+{fmt_num(payout)} 🥕</u></b> 지급됐어요 🎉"
+        f"🍎 <b><u>+{fmt_num(payout)} 🍎</u></b> 지급됐어요 🎉"
     )
 
 

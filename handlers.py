@@ -359,7 +359,7 @@ async def cmd_checkin(message: Message, bot: Bot):
     asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
 
 
-# ── /당근 /채찍 (관리자 포인트 지급/차감) ────────────────────────────────────────
+# ── /사과 /채찍 (관리자 포인트 지급/차감) ────────────────────────────────────────
 
 async def _point_cmd(message: Message, bot: Bot, is_add: bool):
     cfg = await get_cfg()
@@ -373,10 +373,10 @@ async def _point_cmd(message: Message, bot: Bot, is_add: bool):
 
     await bot.delete_message(message.chat.id, message.message_id)
 
-    cmd = "/당근" if is_add else "/채찍"
+    cmd = "/사과" if is_add else "/채찍"
     args = message.text.split(maxsplit=3)
 
-    # 모드 1: /당근 @태그|유저ID 개수 [사유]
+    # 모드 1: /사과 @태그|유저ID 개수 [사유]
     if len(args) >= 3 and (args[1].startswith("@") or args[1].isdigit()):
         target_arg = args[1]
         if not args[2].isdigit():
@@ -399,7 +399,7 @@ async def _point_cmd(message: Message, bot: Bot, is_add: bool):
         target_id = target_row["user_id"]
         target_username = target_row["username"]
 
-    # 모드 2: 답장 + /당근 개수 [사유]  (기존 방식)
+    # 모드 2: 답장 + /사과 개수 [사유]  (기존 방식)
     elif message.reply_to_message and message.reply_to_message.from_user:
         if len(args) < 2 or not args[1].isdigit():
             sent = await message.answer(f"❌ <i>사용법: {cmd} 숫자 사유</i>", parse_mode="HTML")
@@ -430,14 +430,73 @@ async def _point_cmd(message: Message, bot: Bot, is_add: bool):
     asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
 
 
-@router.message(Command("당근"))
-async def cmd_carrot(message: Message, bot: Bot):
+@router.message(Command("사과"))
+async def cmd_apple(message: Message, bot: Bot):
     await _point_cmd(message, bot, is_add=True)
 
 
 @router.message(Command("채찍"))
 async def cmd_whip(message: Message, bot: Bot):
     await _point_cmd(message, bot, is_add=False)
+
+
+# ── /바카라토픽 (관리자: 바카라 지정 토픽 설정) ─────────────────────────────────
+
+@router.message(Command("바카라토픽"))
+async def cmd_bac_topic(message: Message, bot: Bot):
+    cfg = await get_cfg()
+    uid = message.from_user.id
+    await bot.delete_message(message.chat.id, message.message_id)
+
+    if not await db.is_admin(uid):
+        sent = await message.answer(formats.no_permission(), parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    args = (message.text or "").split()
+    # /바카라토픽 해제
+    if len(args) >= 2 and args[1] == "해제":
+        await db.set_config("baccarat_topic_id", "")
+        sent = await message.answer("✅ <b>바카라 토픽 제한 해제됨</b>\n어느 채널에서나 사용 가능합니다.", parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    thread_id = message.message_thread_id
+    if not thread_id:
+        sent = await message.answer(
+            "❌ <i>토픽(스레드) 내에서 실행해주세요.\n해제하려면: /바카라토픽 해제</i>",
+            parse_mode="HTML",
+        )
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    await db.set_config("baccarat_topic_id", str(thread_id))
+    sent = await message.answer(
+        f"✅ <b>바카라 토픽 설정 완료!</b>\n토픽 ID: <code>{thread_id}</code>\n이 토픽에서만 /베팅 사용 가능합니다.",
+        parse_mode="HTML",
+    )
+    asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"] + 5))
+
+
+# ── /db초기화 (관리자: DB 전체 초기화) ────────────────────────────────────────
+
+@router.message(Command("db초기화"))
+async def cmd_db_reset(message: Message, bot: Bot):
+    cfg = await get_cfg()
+    uid = message.from_user.id
+    await bot.delete_message(message.chat.id, message.message_id)
+
+    if not await db.is_admin(uid):
+        sent = await message.answer(formats.no_permission(), parse_mode="HTML")
+        asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
+        return
+
+    await db.reset_db()
+    sent = await message.answer(
+        "✅ <b>DB 초기화 완료!</b>\n모든 유저 데이터, 포인트, 설정이 초기화됐습니다.",
+        parse_mode="HTML",
+    )
+    asyncio.create_task(delete_after(bot, message.chat.id, sent.message_id, cfg["msg_autodelete_sec"]))
 
 
 # ── /로또 ─────────────────────────────────────────────────────────────────────
@@ -568,7 +627,7 @@ async def cb_lotto_buy(cb: CallbackQuery, bot: Bot):
     user = await db.get_user(uid)
     balance = user["points"] if user else 0
     if balance < cfg["lotto_price"]:
-        await cb.answer(f"당근이 부족합니다. (잔액: {balance:,}🥕)", show_alert=True)
+        await cb.answer(f"사과가 부족합니다. (잔액: {balance:,}🍎)", show_alert=True)
         return
 
     kb = InlineKeyboardMarkup(inline_keyboard=[
@@ -635,7 +694,7 @@ async def cb_lotto_auto(cb: CallbackQuery, bot: Bot):
     balance = user["points"] if user else 0
     price = cfg["lotto_price"]
     if balance < price:
-        await cb.answer(f"당근이 부족합니다. (잔액: {balance:,}🥕)", show_alert=True)
+        await cb.answer(f"사과가 부족합니다. (잔액: {balance:,}🍎)", show_alert=True)
         return
 
     max_afford = balance // price
@@ -699,7 +758,7 @@ async def cb_lotto_auto_qty(cb: CallbackQuery, bot: Bot):
 
     lines = [
         f"<blockquote>✅ <b>자동구매 완료  {actual}장</b></blockquote>",
-        f"💰 잔여 당근: <b>{fmt_num(balance - price * actual)}🥕</b>",
+        f"💰 잔여 사과: <b>{fmt_num(balance - price * actual)}🍎</b>",
         "",
     ]
     for i, nums in enumerate(tickets_bought, 1):
@@ -773,7 +832,7 @@ async def cb_lotto_go(cb: CallbackQuery, bot: Bot):
     balance = user["points"] if user else 0
     price = cfg["lotto_price"]
     if balance < price:
-        await cb.answer(f"당근이 부족합니다. (잔액: {balance:,}🥕)", show_alert=True)
+        await cb.answer(f"사과가 부족합니다. (잔액: {balance:,}🍎)", show_alert=True)
         return
 
     sorted_nums = sorted(sel)

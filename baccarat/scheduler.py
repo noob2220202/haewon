@@ -26,6 +26,7 @@ _state: dict = {
     "task": None,
     "round_id": None,
     "chat_id": None,
+    "thread_id": None,
 }
 
 
@@ -33,12 +34,13 @@ def get_state() -> dict:
     return _state
 
 
-async def start_game(bot: Bot, chat_id: int):
+async def start_game(bot: Bot, chat_id: int, thread_id: int | None = None):
     """idle 상태에서 게임 시작. 이미 실행 중이면 무시."""
     if _state["active"]:
         return
     _state["active"] = True
     _state["chat_id"] = chat_id
+    _state["thread_id"] = thread_id
     round_id = await db.baccarat_open_round()
     _state["round_id"] = round_id
     _state["task"] = asyncio.create_task(game_loop(bot, chat_id, round_id))
@@ -46,17 +48,19 @@ async def start_game(bot: Bot, chat_id: int):
 
 async def game_loop(bot: Bot, chat_id: int, first_round_id: int):
     round_id = first_round_id
+    thread_id = _state["thread_id"]
     try:
         while True:
             # 1. 회차 공지 + 핀 업데이트
             round_row = await db.baccarat_get_round(round_id)
             round_no = round_row["id"]
             totals = await db.baccarat_get_totals(round_id)
-            await _update_pin(bot, chat_id, round_no, totals, "betting")
+            await _update_pin(bot, chat_id, round_no, totals, "betting", thread_id=thread_id)
 
             # 오픈 공지
             try:
-                m = await bot.send_message(chat_id, fmt.round_open(round_no), parse_mode="HTML")
+                m = await bot.send_message(chat_id, fmt.round_open(round_no), parse_mode="HTML",
+                                           message_thread_id=thread_id)
                 asyncio.create_task(_delete_after(bot, chat_id, m.message_id, 30))
             except Exception as e:
                 log.warning("round open msg failed: %s", e)
@@ -76,7 +80,8 @@ async def game_loop(bot: Bot, chat_id: int, first_round_id: int):
             await _update_pin_caption_only(bot, chat_id, round_no, totals, "closed")
 
             try:
-                m = await bot.send_message(chat_id, fmt.betting_closed(round_no, totals), parse_mode="HTML")
+                m = await bot.send_message(chat_id, fmt.betting_closed(round_no, totals), parse_mode="HTML",
+                                           message_thread_id=thread_id)
                 asyncio.create_task(_delete_after(bot, chat_id, m.message_id, 15))
             except Exception as e:
                 log.warning("closed msg failed: %s", e)
@@ -92,7 +97,8 @@ async def game_loop(bot: Bot, chat_id: int, first_round_id: int):
                 _state["round_id"] = None
                 await _update_pin_caption_only(bot, chat_id, round_no, totals, "done")
                 try:
-                    await bot.send_message(chat_id, fmt.idle_notice(), parse_mode="HTML")
+                    await bot.send_message(chat_id, fmt.idle_notice(), parse_mode="HTML",
+                                           message_thread_id=thread_id)
                 except Exception:
                     pass
                 return
@@ -109,7 +115,8 @@ async def game_loop(bot: Bot, chat_id: int, first_round_id: int):
 
             result_text = fmt.round_result(round_no, p_dice, b_dice, result, bets, payouts)
             try:
-                await bot.send_message(chat_id, result_text, parse_mode="HTML")
+                await bot.send_message(chat_id, result_text, parse_mode="HTML",
+                                       message_thread_id=thread_id)
             except Exception as e:
                 log.warning("result msg failed: %s", e)
 
@@ -131,15 +138,16 @@ async def game_loop(bot: Bot, chat_id: int, first_round_id: int):
 
 async def _roll_all(bot: Bot, chat_id: int):
     """주사위 순서대로 전송. 결과 반환: (result, p_dice, b_dice)."""
+    thread_id = _state["thread_id"]
 
     async def send_die(label: str | None = None) -> int:
         if label:
             try:
-                lm = await bot.send_message(chat_id, label)
+                lm = await bot.send_message(chat_id, label, message_thread_id=thread_id)
                 asyncio.create_task(_delete_after(bot, chat_id, lm.message_id, 20))
             except Exception:
                 pass
-        msg = await bot.send_dice(chat_id, emoji="🎲")
+        msg = await bot.send_dice(chat_id, emoji="🎲", message_thread_id=thread_id)
         await asyncio.sleep(DICE_DELAY_SEC)
         return msg.dice.value
 
@@ -171,7 +179,8 @@ async def _roll_all(bot: Bot, chat_id: int):
     return result, p_dice, b_dice
 
 
-async def _update_pin(bot: Bot, chat_id: int, round_no: int, totals: dict, status: str):
+async def _update_pin(bot: Bot, chat_id: int, round_no: int, totals: dict, status: str,
+                      thread_id: int | None = None):
     """이미지 + 캡션을 함께 교체 (회차 오픈 시)."""
     history_rows = await db.baccarat_get_history(limit=200)
     history = [r["result"] for r in history_rows if r["result"]]
@@ -202,6 +211,7 @@ async def _update_pin(bot: Bot, chat_id: int, round_no: int, totals: dict, statu
             photo=BufferedInputFile(img_bytes, filename="road.png"),
             caption=caption,
             parse_mode="HTML",
+            message_thread_id=thread_id,
         )
         await bot.pin_chat_message(chat_id, msg.message_id, disable_notification=True)
         await db.set_config("baccarat_pin_msg_id", str(msg.message_id))

@@ -45,13 +45,21 @@ async def cmd_bet(message: Message, bot: Bot):
         await _reply_del(message, bot, "❌ 그룹 채팅에서만 사용할 수 있어요.")
         return
 
+    # 지정 토픽 제한
+    cfg_raw = await db.get_config_raw()
+    bac_topic = cfg_raw.get("baccarat_topic_id", "")
+    if bac_topic:
+        if str(message.message_thread_id or "") != bac_topic:
+            await _reply_del(message, bot, "❌ 바카라는 지정된 토픽에서만 이용 가능해요.")
+            return
+
     # 금액 파싱
     args = (message.text or "").split()[1:]
     if not args:
         await _reply_del(message, bot, "사용법: <b>/베팅 1000</b>", delay=7)
         return
 
-    raw = args[0].replace(",", "").replace("🥕", "")
+    raw = args[0].replace(",", "").replace("🍎", "")
     if not raw.isdigit():
         await _reply_del(message, bot, fmt.bet_error("숫자로 금액을 입력하세요. 예) /베팅 1000"))
         return
@@ -63,10 +71,10 @@ async def cmd_bet(message: Message, bot: Bot):
     max_bet = int(cfg_raw.get("baccarat_max_bet", "0"))
 
     if amount < min_bet:
-        await _reply_del(message, bot, fmt.bet_error(f"최소 베팅 금액은 <b>{min_bet:,}🥕</b>입니다."))
+        await _reply_del(message, bot, fmt.bet_error(f"최소 베팅 금액은 <b>{min_bet:,}🍎</b>입니다."))
         return
     if max_bet > 0 and amount > max_bet:
-        await _reply_del(message, bot, fmt.bet_error(f"최대 베팅 금액은 <b>{max_bet:,}🥕</b>입니다."))
+        await _reply_del(message, bot, fmt.bet_error(f"최대 베팅 금액은 <b>{max_bet:,}🍎</b>입니다."))
         return
 
     await db.upsert_user(message.from_user.id, message.from_user.username)
@@ -74,13 +82,13 @@ async def cmd_bet(message: Message, bot: Bot):
     user_row = await db.get_user(message.from_user.id)
     balance = user_row["points"] if user_row else 0
     if amount > balance:
-        await _reply_del(message, bot, fmt.bet_error(f"잔액 부족. 현재 잔액: <b>{balance:,}🥕</b>"))
+        await _reply_del(message, bot, fmt.bet_error(f"잔액 부족. 현재 잔액: <b>{balance:,}🍎</b>"))
         return
 
     # 활성 회차 확인 (없으면 게임 시작)
     round_row = await db.baccarat_get_active_round()
     if not round_row:
-        await scheduler.start_game(bot, message.chat.id)
+        await scheduler.start_game(bot, message.chat.id, message.message_thread_id)
         await asyncio.sleep(0.3)
         round_row = await db.baccarat_get_active_round()
 
@@ -92,7 +100,7 @@ async def cmd_bet(message: Message, bot: Bot):
     existing = await db.baccarat_get_user_bet(round_row["id"], message.from_user.id)
     if existing:
         kor = {"player": "플레이어", "banker": "뱅커", "tie": "타이"}[existing["side"]]
-        await _reply_del(message, bot, f"이미 <b>{kor}</b>에 <b>{existing['amount']:,}🥕</b> 베팅하셨어요!")
+        await _reply_del(message, bot, f"이미 <b>{kor}</b>에 <b>{existing['amount']:,}🍎</b> 베팅하셨어요!")
         return
 
     uid = message.from_user.id
@@ -163,7 +171,7 @@ async def cb_place_bet(cb: CallbackQuery, bot: Bot):
     user_row = await db.get_user(cb.from_user.id)
     balance = user_row["points"] if user_row else 0
     if amount > balance:
-        await cb.answer(f"잔액 부족 ({balance:,}🥕)", show_alert=True)
+        await cb.answer(f"잔액 부족 ({balance:,}🍎)", show_alert=True)
         return
 
     # 포인트 차감 + 베팅 등록
